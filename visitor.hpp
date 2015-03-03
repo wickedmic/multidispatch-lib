@@ -9,13 +9,13 @@ namespace utility
 	struct visitor_base<Visitable, FurtherVisitables...> : public visitor_base<FurtherVisitables ...>
 	{
 		using visitor_base<FurtherVisitables...>::_visit;
-		virtual void _visit(Visitable& visitable) = 0;
+		virtual void _visit(Visitable& visitable) const = 0;
 	};
 
 	template<typename Visitable>
 	struct visitor_base<Visitable>
 	{
-		virtual void _visit(Visitable& visitable) = 0;
+		virtual void _visit(Visitable& visitable) const = 0;
 	};
 
 	namespace detail
@@ -26,18 +26,18 @@ namespace utility
 		template<typename Derived, typename VisitorBase, typename Visitable, typename... FurtherVisitables>
 		struct visitor_impl<Derived, VisitorBase, Visitable, FurtherVisitables...> : public visitor_impl<Derived, VisitorBase, FurtherVisitables...>
 		{
-			virtual void _visit(Visitable& visitable) override
+			virtual void _visit(Visitable& visitable) const override
 			{
-				static_cast<Derived*>(this)->visit(visitable);
+				static_cast<Derived const*>(this)->visit(visitable);
 			}
 		};
 
 		template<typename Derived, typename VisitorBase, typename Visitable>
 		struct visitor_impl<Derived, VisitorBase, Visitable> : public VisitorBase
 		{
-			virtual void _visit(Visitable& visitable) override
+			virtual void _visit(Visitable& visitable) const override
 			{
-				static_cast<Derived*>(this)->visit(visitable);
+				static_cast<Derived const*>(this)->visit(visitable);
 			}
 		};
 	}
