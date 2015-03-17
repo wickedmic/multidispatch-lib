@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <memory>
 #include <index_of.hpp>
+#include <boost/mpl/eval_if.hpp>
 
 namespace md
 {
@@ -57,15 +58,6 @@ namespace md
 		std::unique_ptr<concept> _object;
 	};
 
-//	template<typename... Args1>
-//	struct table
-//	{
-//		template<typename... Args2>
-//		constexpr auto foo()
-//		{
-//			return [](void* p1, void* p2){ somefunc(static_cast<Head1*>(p1), static_cast<Head2*>(p1)); };
-//		}
-//	};
 
 	template<typename Type, typename Functor>
 	struct dispatch_function
@@ -78,6 +70,7 @@ namespace md
 		using function_t = void(*)(void*, Functor);
 		constexpr static function_t value = func;
 	};
+
 
 	template<typename TypeList1, typename Functor> struct dispatcher;
 
@@ -104,5 +97,112 @@ namespace md
 	{
 		dispatcher<List, Functor>::dispatch(handle, functor);
 	}
+
+
+	/// append
+	template<typename TypeList, typename Type> struct append;
+
+	template<template<typename...> class List, typename... Types, typename Type>
+	struct append<List<Types...>, Type>
+	{
+		using type = List<Types..., Type>;
+	};
+
+
+	/// concat
+	template<typename List1, typename List2> struct concat;
+
+	template<template<typename...> class List1, typename... Types1, template<typename...> class List2, typename... Types2>
+	struct concat<List1<Types1...>, List2<Types2...>>
+	{
+		using type = List1<Types1..., Types2...>;
+	};
+
+	template<typename List1, typename List2>
+	using concat_t = typename concat<List1, List2>::type;
+
+	/// prepends Type to each list in ListOfLists
+	template<typename Type, typename ListOfLists> struct foreach_prepend;
+
+	template<typename Type, template<typename...> class ListOfLists, template<typename...> class SubList, typename... SubListEntries, typename... OtherSubLists>
+	struct foreach_prepend<Type, ListOfLists<SubList<SubListEntries...>, OtherSubLists...>>
+	{
+		using type =
+			typename concat<
+				ListOfLists<SubList<Type, SubListEntries...>>,
+				typename foreach_prepend<Type, ListOfLists<OtherSubLists...>>::type
+			>::type;
+	};
+
+	template<typename Type, template<typename...> class ListOfLists, template<typename...> class SubList, typename... SubListEntries>
+	struct foreach_prepend<Type, ListOfLists<SubList<SubListEntries...>>>
+	{
+		using type = ListOfLists<SubList<Type, SubListEntries...>>;
+	};
+
+	template<typename Type, template<typename...> class ListOfLists>
+	struct foreach_prepend<Type, ListOfLists<>>
+	{
+		using type = ListOfLists<>;
+	};
+
+
+	/// if_
+	template<bool, typename TrueType, typename FalseType>
+	struct if_
+	{
+		using type = FalseType;
+	};
+
+
+	template<typename TrueType, typename FalseType>
+	struct if_<true, TrueType, FalseType>
+	{
+		using type = TrueType;
+	};
+
+
+	/// build_tuple
+	template<typename... List> struct cartesian_product;
+
+	template<template<typename...> class List, typename Type, typename... Types, typename... OtherLists>
+	struct cartesian_product<List<Type, Types...>, OtherLists...>
+	{
+		using type =
+			typename concat<
+				typename foreach_prepend<
+					Type,
+					typename if_<
+						sizeof...(OtherLists) != 0,
+						typename cartesian_product<OtherLists...>::type,
+						List<List<>>
+					>::type
+				>::type,
+				typename cartesian_product<
+					List<Types...>,
+					OtherLists...
+				>::type
+			>::type;
+	};
+
+	template<template<typename...> class List, typename... OtherLists>
+	struct cartesian_product<List<>, OtherLists...>
+	{
+		using type = List<>;
+	};
+
+	template<template<typename...> class List>
+	struct cartesian_product<List<>>
+	{
+		using type = List<>;
+	};
+
+	template<>
+	struct cartesian_product<>
+	{
+		// sadly we don't know the list type here, so we return void
+		// and compensate this 'wrong' type by using if_ (see above)
+		using type = void;
+	};
 
 }
