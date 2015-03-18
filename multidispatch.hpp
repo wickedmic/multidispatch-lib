@@ -1,7 +1,6 @@
 #include <cstdlib>
 #include <memory>
 #include <index_of.hpp>
-#include <boost/mpl/eval_if.hpp>
 
 namespace md
 {
@@ -57,46 +56,6 @@ namespace md
 	private:
 		std::unique_ptr<concept> _object;
 	};
-
-
-	template<typename Type, typename Functor>
-	struct dispatch_function
-	{
-		static void func(void* p1, Functor functor)
-		{
-			functor(*reinterpret_cast<Type*>(p1));
-		}
-
-		using function_t = void(*)(void*, Functor);
-		constexpr static function_t value = func;
-	};
-
-
-	template<typename TypeList1, typename Functor> struct dispatcher;
-
-	template<template<typename...> class List, typename... Types, typename Functor>
-	struct dispatcher<List<Types...>, Functor>
-	{
-		using function_t = void(*)(void*, Functor);
-		//using table_t = function_t[sizeof...(Types2...)];
-
-		static function_t function(std::size_t index)
-		{
-			static function_t vtable[] = { dispatch_function<Types, Functor>::value... };
-			return vtable[index];
-		}
-
-		static void dispatch(handle<List<Types...>>& h, Functor functor)
-		{
-			function(h.type())(h.get(), functor);
-		}
-	};
-
-	template<typename List, typename Functor>
-	void dispatch(handle<List>& handle, Functor functor)
-	{
-		dispatcher<List, Functor>::dispatch(handle, functor);
-	}
 
 
 	/// append
@@ -204,5 +163,113 @@ namespace md
 		// and compensate this 'wrong' type by using if_ (see above)
 		using type = void;
 	};
+
+
+	template<typename> struct replace_void
+	{
+		using type = void;
+	};
+
+
+	template<typename> struct replace_size_t
+	{
+		using type = std::size_t;
+	};
+
+
+	/// returns the number of elements in List
+	template<typename> struct size;
+
+	template<template<typename...> class List, typename Type, typename... Types>
+	struct size<List<Type, Types...>>
+	{
+		static const std::size_t value = size<List<Types...>>::value + 1;
+	};
+
+	template<template<typename...> class List>
+	struct size<List<>>
+	{
+		static const std::size_t value = 0;
+	};
+
+
+	// type_index
+	template<typename... Lists> struct type_index;
+
+	template<typename FirstList, typename... Lists>
+	struct type_index<FirstList, Lists...>
+	{
+		/// returns the index of a set of types (given by thier ids)
+		static std::size_t index(std::size_t type_id, typename replace_size_t<Lists>::type... type_ids)
+		{
+			return type_id * size<typename cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
+		}
+	};
+
+	template<typename List>
+	struct type_index<List>
+	{
+		static std::size_t index(std::size_t type_id)
+		{
+			return type_id;
+		}
+	};
+
+
+	template<typename Functor, typename TypeList> struct dispatch_function;
+
+	template<typename Functor, template<typename...> class List, typename... Types>
+	struct dispatch_function<Functor, List<Types...>>
+	{
+		static auto func(Functor functor, typename replace_void<Types>::type*... params)
+		{
+			return functor(*reinterpret_cast<Types*>(params)...);
+		}
+
+		constexpr static auto value = func;
+	};
+
+
+	template<typename Functor, typename ListOfLists> struct function_table;
+
+	template<typename Functor, template<typename...> class List, typename FirstList, typename... OtherLists>
+	struct function_table<Functor, List<FirstList, OtherLists...>>
+	{
+		static auto get(std::size_t index)
+		{
+			using function_t = decltype(dispatch_function<Functor, FirstList>::value);
+			static function_t table[] = { dispatch_function<Functor, FirstList>::value, dispatch_function<Functor, OtherLists>::value... };
+
+			return table[index];
+		}
+	};
+
+
+	template<
+		typename Functor, // functor to be call with the recovered types
+		typename... TypeLists // lists of type describing the available type for each parameter
+	>
+	struct dispatcher
+	{
+		static auto function(std::size_t index)
+		{
+			return function_table<Functor, typename cartesian_product<TypeLists...>::type>::get(index);
+		}
+
+		static auto dispatch(Functor functor, handle<TypeLists>&... handles)
+		{
+			std::size_t index = type_index<TypeLists...>::index(handles.type()...);
+			return function(index)(functor, handles.get()...);
+		}
+	};
+
+	template<
+		typename Functor, // functor which accepts as many parameters as given lists (and every type combination of these lists)
+		typename... Lists // pack of lists containing the types available of the respective handle
+	>
+	void dispatch(Functor functor, handle<Lists>&... handles)
+	{
+		dispatcher<Functor, Lists...>::dispatch(functor, handles...);
+	}
 
 }
