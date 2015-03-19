@@ -221,12 +221,10 @@ namespace md
 	template<typename Functor, template<typename...> class List, typename... Types>
 	struct dispatch_function<Functor, List<Types...>>
 	{
-		static auto func(Functor functor, typename replace_void<Types>::type*... params)
+		static auto function(Functor functor, typename replace_void<Types>::type*... params)
 		{
 			return functor(*reinterpret_cast<Types*>(params)...);
 		}
-
-		constexpr static auto value = func;
 	};
 
 
@@ -237,8 +235,8 @@ namespace md
 	{
 		static auto get(std::size_t index)
 		{
-			using function_t = decltype(dispatch_function<Functor, FirstList>::value);
-			static function_t table[] = { dispatch_function<Functor, FirstList>::value, dispatch_function<Functor, OtherLists>::value... };
+			using function_t = decltype(&dispatch_function<Functor, FirstList>::function);
+			static function_t table[] = { dispatch_function<Functor, FirstList>::function, dispatch_function<Functor, OtherLists>::function... };
 
 			return table[index];
 		}
