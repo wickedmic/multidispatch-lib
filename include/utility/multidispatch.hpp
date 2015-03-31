@@ -235,7 +235,10 @@ namespace md
 	{
 		static auto get(std::size_t index)
 		{
+			// take the first type combination to determine the return type
 			using function_t = decltype(&dispatch_function<Functor, FirstList>::function);
+
+			// build static function table
 			static function_t table[] = { dispatch_function<Functor, FirstList>::function, dispatch_function<Functor, OtherLists>::function... };
 
 			return table[index];
