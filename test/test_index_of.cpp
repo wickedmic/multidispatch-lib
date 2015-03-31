@@ -1,14 +1,17 @@
-#include <iostream>
-#include <tuple>
-#include "type_map.hpp"
+#define BOOST_TEST_MODULE index_of
+#include <boost/test/included/unit_test.hpp>
 
-int main()
+#include <index_of.hpp>
+
+template<typename...> struct List;
+
+BOOST_AUTO_TEST_CASE(IndexTest)
 {
 	using namespace utility;
 
-	using map = std::tuple<int,double,float>;
+	using map = List<int,double,float>;
 
-	std::cout << "int: " << index_of<map, int>::value << "\ndouble: " << index_of<map,double>::value << "\nfloat: " << index_of<map,float>::value << std::endl;
-
-	return 0;
+	BOOST_CHECK( (index_of<map, int>::value    == 0) );
+	BOOST_CHECK( (index_of<map, double>::value == 1) );
+	BOOST_CHECK( (index_of<map, float>::value  == 2) );
 }

@@ -1,6 +1,7 @@
+#define BOOST_TEST_MODULE fold
+#include <boost/test/included/unit_test.hpp>
+
 #include <type_traits>
-#include <algorithm>
-#include <tuple>
 #include "foldr.hpp"
 #include "foldl.hpp"
 
@@ -21,11 +22,11 @@ struct append<List<Types...>, Type>
 	using type = List<Types..., Type>;
 };
 
-template<typename> struct probe;
+template<typename...> struct list_t;
 
-int main()
+BOOST_AUTO_TEST_CASE(FoldMaxTest)
 {
-	using list =
+	using list1 =
 		std::tuple<
 			std::integral_constant<unsigned, 1>,
 			std::integral_constant<unsigned, 2>,
@@ -34,16 +35,18 @@ int main()
 			std::integral_constant<unsigned, 5>,
 			std::integral_constant<unsigned, 6>
 		>;
-	static_assert(foldr<max, std::integral_constant<unsigned,0>, list>::type::value == 6, "");
-	static_assert(foldl<max, std::integral_constant<unsigned,0>, list>::type::value == 6, "");
 
+	BOOST_CHECK( (foldr<max, std::integral_constant<unsigned,0>, list1>::type::value == 6) );
+	BOOST_CHECK( (foldl<max, std::integral_constant<unsigned,0>, list1>::type::value == 6) );
+}
+
+BOOST_AUTO_TEST_CASE(FoldAppendTest)
+{
 	using list2 = std::tuple<int,float, double>;
-	static_assert(
+	BOOST_CHECK( (
 		std::is_same<
 			typename foldl<append, std::tuple<>, list2>::type,
 			std::tuple<int, float, double>
-		>::value,
-	"");
-
-	return 0;
+		>::value == true
+	) );
 }

@@ -1,41 +1,54 @@
-#include <iostream>
+#define BOOST_TEST_MODULE visitor
+#include <boost/test/included/unit_test.hpp>
+
 #include "visitor.hpp"
 
 template<typename> struct probe;
 
-class A {};
-class B {};
-
-using visitor_base_orig = utility::visitor_base<A, B>;
-using visitor_base = utility::make_const_visitor_t<visitor_base_orig>;
-
-struct visitor : public utility::visitor<::visitor, ::visitor_base>
+struct A
 {
-	void visit(const A& a)
+	A() : visited{false} {}
+	bool visited;
+};
+
+struct B
+{
+	B() : visited{false} {}
+	bool visited;
+};
+
+using base = utility::visitor_base<A,B>;
+
+struct visitor : public utility::visitor<visitor, base>
+{
+	void visit(A& a) const
 	{
-		std::cout << "visit(A)" << std::endl;
+		a.visited = true;
 	}
 
-	void visit(const B& b)
+	void visit(B& b) const
 	{
-		std::cout << "visit(B)" << std::endl;
+		b.visited = true;
 	}
 };
 
 template<typename T>
-void test(T&& obj, visitor_base& visitor)
+void visit(base& visitor, T&& obj)
 {
 	visitor._visit(std::forward<T>(obj));
 }
 
-int main()
+BOOST_AUTO_TEST_CASE(VisitorTest)
 {
 	visitor v;
-	A const a{};
-	B const b{};
+	A a{};
+	B b{};
 
-	test(a, v);
-	test(b, v);
+	visit(v, a);
+	BOOST_CHECK(a.visited == true);
 
-	return 0;
+	visit(v, b);
+	BOOST_CHECK(b.visited == true);
 }
+
+
