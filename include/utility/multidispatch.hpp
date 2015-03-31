@@ -268,9 +268,9 @@ namespace md
 		typename Functor, // functor which accepts as many parameters as given lists (and every type combination of these lists)
 		typename... Lists // pack of lists containing the types available of the respective handle
 	>
-	void dispatch(Functor functor, handle<Lists>&... handles)
+	auto dispatch(Functor functor, handle<Lists>&... handles)
 	{
-		dispatcher<Functor, Lists...>::dispatch(functor, handles...);
+		return dispatcher<Functor, Lists...>::dispatch(functor, handles...);
 	}
 
 }
