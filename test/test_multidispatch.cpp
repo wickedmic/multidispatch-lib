@@ -20,7 +20,7 @@ struct functor
 };
 
 
-BOOST_AUTO_TEST_CASE(FunctionCallTest)
+BOOST_AUTO_TEST_CASE(function_call_test)
 {
 	md::handle<List<int, float>> h1_1 = 1;
 	md::handle<List<int, float>> h1_2 = 2.3f;
@@ -39,3 +39,7 @@ BOOST_AUTO_TEST_CASE(FunctionCallTest)
 	BOOST_CHECK(md::dispatch(functor{}, h1_2, h2_2, h3_2) == 7);
 }
 
+BOOST_AUTO_TEST_CASE(empty_function_table_test)
+{
+	BOOST_CHECK(md::dispatch([](){return true;}) == true);
+}

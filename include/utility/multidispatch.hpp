@@ -121,7 +121,7 @@ namespace md
 	};
 
 
-	/// build_tuple
+	/// cartesian_product
 	template<typename... List> struct cartesian_product;
 
 	template<template<typename...> class List, typename Type, typename... Types, typename... OtherLists>
@@ -164,17 +164,21 @@ namespace md
 		using type = void;
 	};
 
-
-	template<typename> struct replace_void
+	namespace _md_detail
 	{
-		using type = void;
-	};
+		template<typename> struct replace_void
+		{
+			using type = void;
+		};
 
 
-	template<typename> struct replace_size_t
-	{
-		using type = std::size_t;
-	};
+		template<typename> struct replace_size_t
+		{
+			using type = std::size_t;
+		};
+
+		template<typename...> struct type_list { };
+	}
 
 
 	/// returns the number of elements in List
@@ -200,7 +204,7 @@ namespace md
 	struct type_index<FirstList, Lists...>
 	{
 		/// returns the index of a set of types (given by thier ids)
-		static std::size_t index(std::size_t type_id, typename replace_size_t<Lists>::type... type_ids)
+		static std::size_t index(std::size_t type_id, typename _md_detail::replace_size_t<Lists>::type... type_ids)
 		{
 			return type_id * size<typename cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
 		}
@@ -215,13 +219,22 @@ namespace md
 		}
 	};
 
+	template<>
+	struct type_index<>
+	{
+		static std::size_t index()
+		{
+			return 0; // return dummy index
+		}
+	};
+
 
 	template<typename Functor, typename TypeList> struct dispatch_function;
 
 	template<typename Functor, template<typename...> class List, typename... Types>
 	struct dispatch_function<Functor, List<Types...>>
 	{
-		static auto function(Functor functor, typename replace_void<Types>::type*... params)
+		static auto function(Functor functor, typename _md_detail::replace_void<Types>::type*... params)
 		{
 			return functor(*reinterpret_cast<Types*>(params)...);
 		}
@@ -242,6 +255,16 @@ namespace md
 			static function_t table[] = { dispatch_function<Functor, FirstList>::function, dispatch_function<Functor, OtherLists>::function... };
 
 			return table[index];
+		}
+	};
+
+	template<typename Functor>
+	struct function_table<Functor, void>
+	{
+		static auto get(std::size_t)
+		{
+			// empty type list -> empty function table (i.e. no function table)
+			return dispatch_function<Functor, _md_detail::type_list<>>::function;
 		}
 	};
 
