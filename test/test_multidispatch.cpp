@@ -5,8 +5,25 @@
 
 template<typename...> struct List;
 
-#define MAKE_FUNCTOR_OPERATOR(type1, type2, type3, return_value) unsigned operator()(type1,type2,type3) const { return return_value; }
+BOOST_AUTO_TEST_CASE(HandleTest)
+{
+	md::handle<List<int,double,bool>> handle;
+	BOOST_CHECK( (static_cast<bool>(handle) == false) );
 
+	handle = static_cast<int>(1234);
+	BOOST_CHECK( (handle.type() == 0) );
+	BOOST_CHECK( (*static_cast<int*>(handle.get()) == 1234) );
+
+	handle = static_cast<double>(5.678);
+	BOOST_CHECK( (handle.type() == 1) );
+	BOOST_CHECK( (*static_cast<double*>(handle.get()) == 5.678) );
+
+	handle = static_cast<bool>(true);
+	BOOST_CHECK( (handle.type() == 2) );
+	BOOST_CHECK( (*static_cast<bool*>(handle.get()) == true) );
+}
+
+#define MAKE_FUNCTOR_OPERATOR(type1, type2, type3, return_value) unsigned operator()(type1,type2,type3) const { return return_value; }
 struct functor
 {
 	MAKE_FUNCTOR_OPERATOR(int,   double, void(*)(int,int), 0)
