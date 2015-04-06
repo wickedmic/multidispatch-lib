@@ -4,6 +4,7 @@
 #include "concat.hpp"
 #include "prepend.hpp"
 #include "map.hpp"
+#include "cartesian_product.hpp"
 
 namespace md
 {
@@ -61,79 +62,6 @@ namespace md
 	};
 
 
-
-	/// prepends Type to each list in List
-	template<typename Item, typename List>
-	struct foreach_prepend
-	{
-		template<typename _List>
-		struct prepend
-		{
-			using type = meta::prepend_t<Item, _List>;
-		};
-
-		using type = meta::map_t<prepend, List>;
-	};
-
-
-	/// if_
-	template<bool, typename TrueType, typename FalseType>
-	struct if_
-	{
-		using type = FalseType;
-	};
-
-
-	template<typename TrueType, typename FalseType>
-	struct if_<true, TrueType, FalseType>
-	{
-		using type = TrueType;
-	};
-
-
-	/// cartesian_product
-	template<typename... List> struct cartesian_product;
-
-	template<template<typename...> class List, typename Type, typename... Types, typename... OtherLists>
-	struct cartesian_product<List<Type, Types...>, OtherLists...>
-	{
-		using type =
-			typename meta::concat<
-				typename foreach_prepend<
-					Type,
-					typename if_<
-						sizeof...(OtherLists) != 0,
-						typename cartesian_product<OtherLists...>::type,
-						List<List<>>
-					>::type
-				>::type,
-				typename cartesian_product<
-					List<Types...>,
-					OtherLists...
-				>::type
-			>::type;
-	};
-
-	template<template<typename...> class List, typename... OtherLists>
-	struct cartesian_product<List<>, OtherLists...>
-	{
-		using type = List<>;
-	};
-
-	template<template<typename...> class List>
-	struct cartesian_product<List<>>
-	{
-		using type = List<>;
-	};
-
-	template<>
-	struct cartesian_product<>
-	{
-		// sadly we don't know the list type here, so we return void
-		// and compensate this 'wrong' type by using if_ (see above)
-		using type = void;
-	};
-
 	namespace _md_detail
 	{
 		template<typename, typename Type> struct replace
@@ -168,7 +96,7 @@ namespace md
 		/// returns the index of a set of types (given by thier ids)
 		static std::size_t index(std::size_t type_id, typename _md_detail::replace<Lists,std::size_t>::type... type_ids)
 		{
-			return type_id * size<typename cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
+			return type_id * size<typename meta::cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
 		}
 	};
 
@@ -244,7 +172,7 @@ namespace md
 	{
 		static auto function(std::size_t index)
 		{
-			return function_table<Functor, typename cartesian_product<TypeLists...>::type>::get(index);
+			return function_table<Functor, typename meta::cartesian_product<TypeLists...>::type>::get(index);
 		}
 
 		static auto dispatch(Functor functor, handle<TypeLists>&... handles)
