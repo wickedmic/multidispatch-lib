@@ -166,15 +166,9 @@ namespace md
 
 	namespace _md_detail
 	{
-		template<typename> struct replace_void
+		template<typename, typename Type> struct replace
 		{
-			using type = void;
-		};
-
-
-		template<typename> struct replace_size_t
-		{
-			using type = std::size_t;
+			using type = Type;
 		};
 	}
 
@@ -202,7 +196,7 @@ namespace md
 	struct type_index<FirstList, Lists...>
 	{
 		/// returns the index of a set of types (given by thier ids)
-		static std::size_t index(std::size_t type_id, typename _md_detail::replace_size_t<Lists>::type... type_ids)
+		static std::size_t index(std::size_t type_id, typename _md_detail::replace<Lists,std::size_t>::type... type_ids)
 		{
 			return type_id * size<typename cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
 		}
@@ -232,7 +226,7 @@ namespace md
 	template<typename Functor, template<typename...> class List, typename... Types>
 	struct dispatch_function<Functor, List<Types...>>
 	{
-		static auto function(Functor functor, typename _md_detail::replace_void<Types>::type*... params)
+		static auto function(Functor functor, typename _md_detail::replace<Types,void>::type*... params)
 		{
 			return functor(*reinterpret_cast<Types*>(params)...);
 		}
