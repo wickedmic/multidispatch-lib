@@ -148,22 +148,6 @@ namespace md
 		}
 	};
 
-	template<typename Functor>
-	struct function_table<Functor, void>
-	{
-		static auto function(Functor functor)
-		{
-			return functor();
-		}
-
-		static auto get(std::size_t)
-		{
-			// empty type list -> empty function table (i.e. no function table)
-			return function;
-		}
-	};
-
-
 	template<
 		typename Functor, // functor to be call with the recovered types
 		typename... TypeLists // lists of type describing the available type for each parameter
@@ -182,6 +166,20 @@ namespace md
 		}
 	};
 
+	/// case where no handles are given
+	/**
+		same as directly calling functor()
+	*/
+	template<typename Functor>
+	struct dispatcher<Functor>
+	{
+		static auto dispatch(Functor functor)
+		{
+			return functor();
+		}
+	};
+
+	/// convenient function to have types deduced for dispatcher
 	template<
 		typename Functor, // functor which accepts as many parameters as given lists (and every type combination of these lists)
 		typename... Lists // pack of lists containing the types available of the respective handle
