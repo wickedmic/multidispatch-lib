@@ -3,7 +3,7 @@
 
 namespace meta
 {
-	/// prepend
+	/// prepends Item to List
 	template<typename Item, typename List> struct prepend;
 
 	template<typename Item, template<typename...> class List, typename... Items>
