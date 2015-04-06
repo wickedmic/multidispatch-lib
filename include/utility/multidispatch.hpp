@@ -176,8 +176,6 @@ namespace md
 		{
 			using type = std::size_t;
 		};
-
-		template<typename...> struct type_list { };
 	}
 
 
@@ -261,10 +259,15 @@ namespace md
 	template<typename Functor>
 	struct function_table<Functor, void>
 	{
+		static auto function(Functor functor)
+		{
+			return functor();
+		}
+
 		static auto get(std::size_t)
 		{
 			// empty type list -> empty function table (i.e. no function table)
-			return dispatch_function<Functor, _md_detail::type_list<>>::function;
+			return function;
 		}
 	};
 
