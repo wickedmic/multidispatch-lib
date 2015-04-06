@@ -36,8 +36,8 @@ BOOST_AUTO_TEST_CASE(FoldMaxTest)
 			std::integral_constant<unsigned, 6>
 		>;
 
-	BOOST_CHECK( (foldr<max, std::integral_constant<unsigned,0>, list1>::type::value == 6) );
-	BOOST_CHECK( (foldl<max, std::integral_constant<unsigned,0>, list1>::type::value == 6) );
+	BOOST_CHECK( (meta::foldr<max, std::integral_constant<unsigned,0>, list1>::type::value == 6) );
+	BOOST_CHECK( (meta::foldl<max, std::integral_constant<unsigned,0>, list1>::type::value == 6) );
 }
 
 BOOST_AUTO_TEST_CASE(FoldAppendTest)
@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(FoldAppendTest)
 	using list2 = std::tuple<int,float, double>;
 	BOOST_CHECK( (
 		std::is_same<
-			typename foldl<append, std::tuple<>, list2>::type,
+			typename meta::foldl<append, std::tuple<>, list2>::type,
 			std::tuple<int, float, double>
 		>::value == true
 	) );
