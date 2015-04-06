@@ -1,6 +1,9 @@
 #include <cstdlib>
 #include <memory>
-#include <index_of.hpp>
+#include "index_of.hpp"
+#include "concat.hpp"
+#include "prepend.hpp"
+#include "map.hpp"
 
 namespace md
 {
@@ -58,51 +61,18 @@ namespace md
 	};
 
 
-	/// append
-	template<typename TypeList, typename Type> struct append;
 
-	template<template<typename...> class List, typename... Types, typename Type>
-	struct append<List<Types...>, Type>
+	/// prepends Type to each list in List
+	template<typename Item, typename List>
+	struct foreach_prepend
 	{
-		using type = List<Types..., Type>;
-	};
+		template<typename _List>
+		struct prepend
+		{
+			using type = meta::prepend_t<Item, _List>;
+		};
 
-
-	/// concat
-	template<typename List1, typename List2> struct concat;
-
-	template<template<typename...> class List1, typename... Types1, template<typename...> class List2, typename... Types2>
-	struct concat<List1<Types1...>, List2<Types2...>>
-	{
-		using type = List1<Types1..., Types2...>;
-	};
-
-	template<typename List1, typename List2>
-	using concat_t = typename concat<List1, List2>::type;
-
-	/// prepends Type to each list in ListOfLists
-	template<typename Type, typename ListOfLists> struct foreach_prepend;
-
-	template<typename Type, template<typename...> class ListOfLists, template<typename...> class SubList, typename... SubListEntries, typename... OtherSubLists>
-	struct foreach_prepend<Type, ListOfLists<SubList<SubListEntries...>, OtherSubLists...>>
-	{
-		using type =
-			typename concat<
-				ListOfLists<SubList<Type, SubListEntries...>>,
-				typename foreach_prepend<Type, ListOfLists<OtherSubLists...>>::type
-			>::type;
-	};
-
-	template<typename Type, template<typename...> class ListOfLists, template<typename...> class SubList, typename... SubListEntries>
-	struct foreach_prepend<Type, ListOfLists<SubList<SubListEntries...>>>
-	{
-		using type = ListOfLists<SubList<Type, SubListEntries...>>;
-	};
-
-	template<typename Type, template<typename...> class ListOfLists>
-	struct foreach_prepend<Type, ListOfLists<>>
-	{
-		using type = ListOfLists<>;
+		using type = meta::map_t<prepend, List>;
 	};
 
 
@@ -128,7 +98,7 @@ namespace md
 	struct cartesian_product<List<Type, Types...>, OtherLists...>
 	{
 		using type =
-			typename concat<
+			typename meta::concat<
 				typename foreach_prepend<
 					Type,
 					typename if_<
