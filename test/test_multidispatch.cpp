@@ -5,22 +5,68 @@
 
 template<typename...> struct List;
 
-BOOST_AUTO_TEST_CASE(HandleTest)
+BOOST_AUTO_TEST_CASE(empty_handle)
+{
+	using namespace md;
+
+	handle<List<int,float>> h;
+	BOOST_CHECK_EQUAL( static_cast<bool>(h), false );
+	BOOST_CHECK( h.get() == nullptr );
+	BOOST_CHECK_THROW( h.type(), empty_handle_exception );
+}
+
+BOOST_AUTO_TEST_CASE(handle_value_test)
 {
 	md::handle<List<int,double,bool>> handle;
 	BOOST_CHECK( (static_cast<bool>(handle) == false) );
 
 	handle = static_cast<int>(1234);
 	BOOST_CHECK( (handle.type() == 0) );
-	BOOST_CHECK( (*static_cast<int*>(handle.get()) == 1234) );
+	BOOST_CHECK( (*static_cast<int const*>(handle.get()) == 1234) );
 
 	handle = static_cast<double>(5.678);
 	BOOST_CHECK( (handle.type() == 1) );
-	BOOST_CHECK( (*static_cast<double*>(handle.get()) == 5.678) );
+	BOOST_CHECK( (*static_cast<double const*>(handle.get()) == 5.678) );
 
 	handle = static_cast<bool>(true);
 	BOOST_CHECK( (handle.type() == 2) );
-	BOOST_CHECK( (*static_cast<bool*>(handle.get()) == true) );
+	BOOST_CHECK( (*static_cast<bool const*>(handle.get()) == true) );
+}
+
+BOOST_AUTO_TEST_CASE(handle_cast_test)
+{
+	md::handle<List<int, float, bool>> handle;
+
+	handle = 1234;
+	BOOST_REQUIRE( (md::cast<int>(handle) != nullptr) );
+	BOOST_CHECK(  (*md::cast<int>(handle) == 1234) );
+
+	handle = 5.678f;
+	BOOST_REQUIRE( (md::cast<float>(handle) != nullptr) );
+	BOOST_CHECK(  (*md::cast<float>(handle) == 5.678f) );
+
+	handle = true;
+	BOOST_REQUIRE( (md::cast<bool>(handle) != nullptr) );
+	BOOST_CHECK(  (*md::cast<bool>(handle) == true) );
+
+	BOOST_CHECK( (md::cast<int>(handle) == nullptr) );
+
+	md::handle<List<int, float>> const const_handle = 1234;
+	*md::cast<int>(const_handle) = 5678;
+	BOOST_CHECK_EQUAL( *md::cast<int>(const_handle), 5678 );
+}
+
+BOOST_AUTO_TEST_CASE(handle_get_set_reset_test)
+{
+	md::handle<List<int, float>> h;
+	BOOST_CHECK( h.get() == nullptr );
+
+	h.set<int>(3);
+	BOOST_CHECK( h.get() != nullptr );
+	BOOST_CHECK_EQUAL( *md::cast<int>(h), 3 );
+
+	h.reset();
+	BOOST_CHECK( h.get() == nullptr );
 }
 
 #define MAKE_FUNCTOR_OPERATOR(type1, type2, type3, return_value) unsigned operator()(type1,type2,type3) const { return return_value; }
@@ -59,4 +105,42 @@ BOOST_AUTO_TEST_CASE(function_call_test)
 BOOST_AUTO_TEST_CASE(empty_function_table_test)
 {
 	BOOST_CHECK(md::dispatch([](){return true;}) == true);
+}
+
+BOOST_AUTO_TEST_CASE(const_handles)
+{
+	struct A { int a; };
+	struct B { float dummy; int a; };
+	md::handle<List<A, B>> const h1 = A{1};
+	md::handle<List<A, B>> const h2 = B{0, 2};
+
+	BOOST_CHECK_EQUAL( md::dispatch([](auto& p){ return p.a; }, h1), 1 );
+	BOOST_CHECK_EQUAL( md::dispatch([](auto& p){ return p.a; }, h2), 2 );
+}
+
+BOOST_AUTO_TEST_CASE(const_types)
+{
+	struct TestClass3 { int i; };
+	struct TestClass4 { float f; int i; };
+	struct functor
+	{
+		int operator() (TestClass3 const& c) const
+		{
+			return c.i;
+		}
+
+		int operator() (TestClass4& d) const
+		{
+			d.f = 1.234f;
+			return d.i;
+		}
+	};
+
+	//md::handle<List<TestClass3 const, TestClass4>>       h1 = static_cast<TestClass3 const>(TestClass3{1});
+	md::handle<List<TestClass3 const, TestClass4>>       h1; h1.set<TestClass3 const>(TestClass3{1});
+	md::handle<List<TestClass3 const, TestClass4>> const h2 = TestClass4{0, 2};
+
+	BOOST_CHECK_EQUAL( md::dispatch(functor{}, h1), 1 );
+	BOOST_CHECK_EQUAL( md::dispatch(functor{}, h2), 2);
+	BOOST_CHECK_EQUAL( md::cast<TestClass4>(h2)->f, 1.234f );
 }

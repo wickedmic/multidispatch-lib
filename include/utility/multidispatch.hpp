@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <memory>
+#include <type_traits>
 #include "index_of.hpp"
 #include "concat.hpp"
 #include "prepend.hpp"
@@ -8,27 +9,37 @@
 
 namespace md
 {
+	struct empty_handle_exception {};
+
 	template<typename TypeList> struct handle;
 
 	template<template<typename...> class List, typename... Types>
 	struct handle<List<Types...>>
 	{
 	private:
+		/// interface for carried types
 		struct concept
 		{
 			virtual ~concept() = default;
-			virtual concept* copy() = 0;
-			virtual std::size_t type() = 0;
-			virtual void* get() = 0;
+
+			virtual concept* copy() const = 0;
+			virtual std::size_t type() const = 0;
+			virtual void const* get() const = 0;
 		};
 
+		/// implementation of the concept interface
 		template<typename Object>
 		struct model : public concept
 		{
-			model(Object object) : object(std::move(object)) { }
-			virtual concept* copy() { return new model(*this);}
-			virtual std::size_t type() { return utility::index_of<List<Types...>, Object>::value; }
-			virtual void* get() { return reinterpret_cast<void*>(&object); }
+			// ctor
+			template<typename _Object>
+			model(_Object&& object)
+				: object(std::forward<_Object>(object))
+			{ }
+
+			virtual concept* copy() const override { return new model(*this); }
+			virtual std::size_t type() const override { return meta::index_of<List<Types...>, Object>::value; }
+			virtual void const* get() const override { return reinterpret_cast<void const*>(&object); }
 
 			Object object;
 		};
@@ -37,7 +48,9 @@ namespace md
 		handle() = default;
 
 		template<typename Object>
-		handle(Object object) : _object(new model<Object>(std::move(object))) { }
+		handle(Object&& object)
+			: _object(new model<typename std::remove_reference<Object>::type>(std::forward<Object>(object)))
+		{ }
 
 		handle(handle const& other) : _object(other._object->copy()) { }
 
@@ -54,12 +67,72 @@ namespace md
 
 		operator bool () const { return static_cast<bool>(_object); }
 
-		std::size_t type() { return _object->type(); }
-		void* get() { return _object->get(); }
+
+		/// returns the index of the carried type
+		/**
+			The index is the position in the given type list.
+		*/
+		std::size_t type() const
+		{
+			if(_object)
+				return _object->type();
+			else
+				throw empty_handle_exception{};
+		}
+
+
+		/// returns a const void pointer to the carried object
+		/**
+			If the handle is empty nullptr will be returned.
+
+			This function is intended for internal use. If you just want
+			to access the carried type use the cast() function to access
+			the carried type safely.
+		*/
+		void const* get() const
+		{
+			if(_object)
+				return _object->get();
+			else
+				return nullptr;
+		}
+
+		/// sets the given object as the given type
+		/**
+			RequestedType must be in the list of types of this handle.
+			The given object must be convertible to the RequestedType.
+		*/
+		template<typename RequestedType, typename ActualType>
+		void set(ActualType&& object)
+		{
+			_object.reset(new model<RequestedType>(std::forward<ActualType>(object)));
+		}
+
+		/// removes the carried object making the handle empty
+		void reset()
+		{
+			_object.reset();
+		}
 
 	private:
 		std::unique_ptr<concept> _object;
 	};
+
+
+	/// returns a pointer to the carried type
+	/**
+		If the carried type corresponds to the requested type a valid
+		pointer	is returned, nullptr otherwise. Use handle::type() to
+		get the index into the handle's type list to identify the carried type.
+	*/
+	template<typename Type, template<typename...> class List, typename... Types>
+	Type* cast(handle<List<Types...>> const& handle)
+	{
+		if(meta::index_of<List<Types...>, Type>::value == handle.type())
+			return const_cast<Type*>(reinterpret_cast<Type const*>(handle.get()));
+		else
+			return nullptr;
+	}
 
 
 	namespace _md_detail
@@ -124,9 +197,9 @@ namespace md
 	template<typename Functor, template<typename...> class List, typename... Types>
 	struct dispatch_function<Functor, List<Types...>>
 	{
-		static auto function(Functor functor, typename _md_detail::replace<Types,void>::type*... params)
+		static auto function(Functor functor, typename _md_detail::replace<Types,void const>::type*... params)
 		{
-			return functor(*reinterpret_cast<Types*>(params)...);
+			return functor(*const_cast<Types*>(reinterpret_cast<Types const*>(params))...);
 		}
 	};
 
@@ -148,9 +221,12 @@ namespace md
 		}
 	};
 
+
+
+	/// dispatcher
 	template<
-		typename Functor, // functor to be call with the recovered types
-		typename... TypeLists // lists of type describing the available type for each parameter
+		typename    Functor,  // functor to be call with the recovered types
+		typename... TypeLists // lists of types describing the available type for each parameter
 	>
 	struct dispatcher
 	{
@@ -159,10 +235,11 @@ namespace md
 			return function_table<Functor, typename meta::cartesian_product<TypeLists...>::type>::get(index);
 		}
 
-		static auto dispatch(Functor functor, handle<TypeLists>&... handles)
+		template<typename _Functor, typename... Handles>
+		static auto dispatch(_Functor&& functor, Handles&&... handles)
 		{
 			std::size_t index = type_index<TypeLists...>::index(handles.type()...);
-			return function(index)(functor, handles.get()...);
+			return function(index)(std::forward<_Functor>(functor), handles.get()...);
 		}
 	};
 
@@ -179,14 +256,38 @@ namespace md
 		}
 	};
 
+
+
+	/// get_list
+	template<typename> struct get_list;
+
+	template<template<typename> class Handle, typename List>
+	struct get_list<Handle<List>>
+	{
+		using type = List;
+	};
+
+
+
 	/// convenient function to have types deduced for dispatcher
+	/**
+		The return type is determined by the functor called with the first combination of parameters.
+		Other parameter-type combinations must have the same return type.
+	*/
 	template<
 		typename Functor, // functor which accepts as many parameters as given lists (and every type combination of these lists)
-		typename... Lists // pack of lists containing the types available of the respective handle
+		typename... Handles // TODO: pack of lists containing the types available of the respective handle
 	>
-	auto dispatch(Functor functor, handle<Lists>&... handles)
+	auto dispatch(Functor&& functor, Handles&&... handles)
 	{
-		return dispatcher<Functor, Lists...>::dispatch(functor, handles...);
+		return
+			dispatcher<
+				Functor,
+				typename get_list<typename std::remove_cv<typename std::remove_reference<Handles>::type>::type>::type...
+			>::dispatch(
+				std::forward<Functor>(functor),
+				std::forward<Handles>(handles)...
+			);
 	}
 
 }
