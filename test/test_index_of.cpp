@@ -7,7 +7,7 @@ template<typename...> struct List;
 
 BOOST_AUTO_TEST_CASE(IndexTest)
 {
-	using namespace utility;
+	using namespace meta;
 
 	using map = List<int,double,float>;
 

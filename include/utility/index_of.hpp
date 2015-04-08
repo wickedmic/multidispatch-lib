@@ -1,7 +1,7 @@
 #ifndef INCLGUARD_index_of_hpp
 #define INCLGUARD_index_of_hpp
 
-namespace utility
+namespace meta
 {
 	template<class List, typename Type> struct index_of;
 
