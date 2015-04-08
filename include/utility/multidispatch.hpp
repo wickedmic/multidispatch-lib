@@ -6,6 +6,7 @@
 #include "prepend.hpp"
 #include "map.hpp"
 #include "cartesian_product.hpp"
+#include "size.hpp"
 
 namespace md
 {
@@ -144,21 +145,6 @@ namespace md
 	}
 
 
-	/// returns the number of elements in List
-	template<typename> struct size;
-
-	template<template<typename...> class List, typename Type, typename... Types>
-	struct size<List<Type, Types...>>
-	{
-		static const std::size_t value = size<List<Types...>>::value + 1;
-	};
-
-	template<template<typename...> class List>
-	struct size<List<>>
-	{
-		static const std::size_t value = 0;
-	};
-
 
 	// type_index
 	template<typename... Lists> struct type_index;
@@ -169,7 +155,7 @@ namespace md
 		/// returns the index of a set of types (given by thier ids)
 		static std::size_t index(std::size_t type_id, typename _md_detail::replace<Lists,std::size_t>::type... type_ids)
 		{
-			return type_id * size<typename meta::cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
+			return type_id * meta::size<typename meta::cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
 		}
 	};
 
