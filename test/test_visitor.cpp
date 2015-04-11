@@ -1,5 +1,6 @@
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE visitor
-#include <boost/test/included/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include "visitor.hpp"
 
@@ -38,7 +39,7 @@ void visit(base& visitor, T&& obj)
 	visitor._visit(std::forward<T>(obj));
 }
 
-BOOST_AUTO_TEST_CASE(VisitorTest)
+BOOST_AUTO_TEST_CASE(visitor_test)
 {
 	visitor v;
 	A a{};

@@ -5,13 +5,13 @@ project(utility_tests)
 
 # header files
 set(
-	painter_HEADER
+	utility_HEADER
 )
 
 
 # files to compile
 set(
-	painter_SRCS
+	utility_SRCS
 )
 
 
@@ -72,23 +72,31 @@ endif()
 
 enable_testing()
 
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS unit_test_framework)
 include_directories(${Boost_INCLUDE_DIR})
 
 include_directories("../include/utility/")
 
-add_executable(test_visitor "test_visitor.cpp")
-target_link_libraries(test_visitor)
-add_test(test_visitor test_visitor)
+add_executable(test_bind "test_bind.cpp")
+target_link_libraries(test_bind ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_bind test_bind)
 
-add_executable(test_multidispatch "test_multidispatch.cpp")
-target_link_libraries(test_multidispatch)
-add_test(test_multidispatch test_multidispatch)
-
-add_executable(test_index_of "test_index_of.cpp")
-target_link_libraries(test_index_of)
-add_test(test_index_of test_index_of)
+add_executable(test_cartesian_product "test_cartesian_product.cpp")
+target_link_libraries(test_cartesian_product ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_cartesian_product test_cartesian_product)
 
 add_executable(test_fold "test_fold.cpp")
-target_link_libraries(test_fold)
+target_link_libraries(test_fold ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(test_fold test_fold)
+
+add_executable(test_index_of "test_index_of.cpp")
+target_link_libraries(test_index_of ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_index_of test_index_of)
+
+add_executable(test_multidispatch "test_multidispatch.cpp")
+target_link_libraries(test_multidispatch ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_multidispatch test_multidispatch)
+
+add_executable(test_visitor "test_visitor.cpp")
+target_link_libraries(test_visitor ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_visitor test_visitor)

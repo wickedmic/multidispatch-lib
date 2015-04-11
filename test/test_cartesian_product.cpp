@@ -1,5 +1,6 @@
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cartesian_product
-#include <boost/test/included/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include <type_traits>
 #include <cartesian_product.hpp>

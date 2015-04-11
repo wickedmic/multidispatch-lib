@@ -1,5 +1,6 @@
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE fold
-#include <boost/test/included/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include <type_traits>
 #include "foldr.hpp"
@@ -24,7 +25,7 @@ struct append<List<Types...>, Type>
 
 template<typename...> struct list_t;
 
-BOOST_AUTO_TEST_CASE(FoldMaxTest)
+BOOST_AUTO_TEST_CASE(fold_max_test)
 {
 	using list1 =
 		std::tuple<
@@ -40,7 +41,7 @@ BOOST_AUTO_TEST_CASE(FoldMaxTest)
 	BOOST_CHECK( (meta::foldl<max, std::integral_constant<unsigned,0>, list1>::type::value == 6) );
 }
 
-BOOST_AUTO_TEST_CASE(FoldAppendTest)
+BOOST_AUTO_TEST_CASE(fold_append_test)
 {
 	using list2 = std::tuple<int,float, double>;
 	BOOST_CHECK( (

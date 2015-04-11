@@ -1,11 +1,12 @@
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE index_of
-#include <boost/test/included/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include <index_of.hpp>
 
 template<typename...> struct List;
 
-BOOST_AUTO_TEST_CASE(IndexTest)
+BOOST_AUTO_TEST_CASE(index_of_test)
 {
 	using namespace meta;
 
