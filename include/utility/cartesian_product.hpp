@@ -5,6 +5,7 @@
 #include "prepend.hpp"
 #include "foldr.hpp"
 #include "concat.hpp"
+#include "bind.hpp"
 
 namespace meta
 {
@@ -13,13 +14,22 @@ namespace meta
 	template<typename Item, typename ListOfLists>
 	struct prepend_item_to_each_list
 	{
-		template<typename PrependItem_List>
-		struct prepend_item
-		{
-			using type = typename meta::prepend<Item, PrependItem_List>::type;
-		};
+		//template<typename PrependItem_List>
+		//struct prepend_item
+		//{
+		//	using type = typename meta::prepend<Item, PrependItem_List>::type;
+		//};
 
-		using type = typename meta::map<prepend_item, ListOfLists>::type;
+		//using type = typename meta::map<prepend_item, ListOfLists>::type;
+		using type =
+			typename meta::map<
+				meta::bind<
+					meta::prepend,
+					Item,
+					meta::arg<0>
+				>::template apply,
+				ListOfLists
+			>::type;
 	};
 
 	/// cartesian_product
