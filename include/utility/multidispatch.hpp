@@ -1,3 +1,6 @@
+#ifndef INCLGUARD_multidispatch_hpp
+#define INCLGUARD_multidispatch_hpp
+
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
@@ -277,3 +280,5 @@ namespace md
 	}
 
 }
+
+#endif
