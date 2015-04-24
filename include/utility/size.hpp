@@ -1,5 +1,5 @@
-#ifndef INCLGUARD_size_hpp 
-#define INCLGUARD_size_hpp 
+#ifndef INCLGUARD_size_hpp
+#define INCLGUARD_size_hpp
 
 namespace meta
 {

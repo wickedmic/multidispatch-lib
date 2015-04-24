@@ -10,15 +10,14 @@
 #include "map.hpp"
 #include "cartesian_product.hpp"
 #include "size.hpp"
+#include "if.hpp"
 
 namespace md
 {
 	struct empty_handle_exception {};
 
-	template<typename TypeList> struct handle;
-
-	template<template<typename...> class List, typename... Types>
-	struct handle<List<Types...>>
+	template<typename...>
+	struct handle
 	{
 	private:
 		/// interface for carried types
@@ -42,7 +41,7 @@ namespace md
 			{ }
 
 			virtual concept* copy() const override { return new model(*this); }
-			virtual std::size_t type() const override { return meta::index_of<List<Types...>, Object>::value; }
+			virtual std::size_t type() const override { return meta::index_of<handle, Object>::value; }
 			virtual void const* get() const override { return reinterpret_cast<void const*>(&object); }
 
 			Object object;
@@ -129,10 +128,10 @@ namespace md
 		pointer	is returned, nullptr otherwise. Use handle::type() to
 		get the index into the handle's type list to identify the carried type.
 	*/
-	template<typename Type, template<typename...> class List, typename... Types>
-	Type* cast(handle<List<Types...>> const& handle)
+	template<typename Type, typename... Types>
+	Type* cast(md::handle<Types...> const& handle)
 	{
-		if(meta::index_of<List<Types...>, Type>::value == handle.type())
+		if(meta::index_of<md::handle<Types...>, Type>::value == handle.type())
 			return const_cast<Type*>(reinterpret_cast<Type const*>(handle.get()));
 		else
 			return nullptr;
@@ -272,7 +271,11 @@ namespace md
 		return
 			dispatcher<
 				Functor,
-				typename get_list<typename std::remove_cv<typename std::remove_reference<Handles>::type>::type>::type...
+				typename std::remove_cv<
+					typename std::remove_reference<
+						Handles
+					>::type
+				>::type...
 			>::dispatch(
 				std::forward<Functor>(functor),
 				std::forward<Handles>(handles)...
