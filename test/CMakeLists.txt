@@ -77,6 +77,10 @@ include_directories(${Boost_INCLUDE_DIR})
 
 include_directories("../include/utility/")
 
+add_executable(test_apply_list "test_apply_list.cpp")
+target_link_libraries(test_apply_list ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_apply_list test_apply_list)
+
 add_executable(test_bind "test_bind.cpp")
 target_link_libraries(test_bind ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(test_bind test_bind)
@@ -85,6 +89,10 @@ add_executable(test_cartesian_product "test_cartesian_product.cpp")
 target_link_libraries(test_cartesian_product ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(test_cartesian_product test_cartesian_product)
 
+add_executable(test_filter "test_filter.cpp")
+target_link_libraries(test_filter ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_filter test_filter)
+
 add_executable(test_fold "test_fold.cpp")
 target_link_libraries(test_fold ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(test_fold test_fold)
@@ -92,6 +100,10 @@ add_test(test_fold test_fold)
 add_executable(test_index_of "test_index_of.cpp")
 target_link_libraries(test_index_of ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(test_index_of test_index_of)
+
+add_executable(test_map "test_map.cpp")
+target_link_libraries(test_map ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_map test_map)
 
 add_executable(test_multidispatch "test_multidispatch.cpp")
 target_link_libraries(test_multidispatch ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
