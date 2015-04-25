@@ -11,6 +11,8 @@
 #include "cartesian_product.hpp"
 #include "size.hpp"
 #include "if.hpp"
+#include "apply_list.hpp"
+#include "filter.hpp"
 
 namespace md
 {
@@ -144,29 +146,77 @@ namespace md
 		{
 			using type = Type;
 		};
+
+		template<typename...> struct list;
 	}
 
+
+
+	// is_handle
+	template<typename>
+	struct is_handle
+		: public std::false_type
+	{ };
+
+	template<typename... Types>
+	struct is_handle<md::handle<Types...>>
+		: public std::true_type
+	{ };
+
+	template<typename... Types>
+	struct is_handle<md::handle<Types...> const>
+		: public std::true_type
+	{ };
 
 
 	// type_index
 	template<typename... Lists> struct type_index;
 
-	template<typename FirstList, typename... Lists>
-	struct type_index<FirstList, Lists...>
+	template<typename... HandleTypes, typename... OtherTypes>
+	struct type_index<handle<HandleTypes...>, OtherTypes...>
 	{
 		/// returns the index of a set of types (given by thier ids)
-		static std::size_t index(std::size_t type_id, typename _md_detail::replace<Lists,std::size_t>::type... type_ids)
+		static std::size_t index(md::handle<HandleTypes...> const& handle, OtherTypes const&... other_params)
 		{
-			return type_id * meta::size<typename meta::cartesian_product<Lists...>::type>::value + type_index<Lists...>::index(type_ids...);
+			auto size =
+				meta::size<
+					typename meta::apply_list<
+						meta::cartesian_product,
+						typename meta::filter<
+							is_handle,
+							_md_detail::list<OtherTypes...>
+						>::type
+					>::type::type
+				>::value;
+
+			return handle.type() * size + type_index<OtherTypes...>::index(other_params...);
 		}
 	};
 
-	template<typename List>
-	struct type_index<List>
+	template<typename... Types>
+	struct type_index<handle<Types...>>
 	{
-		static std::size_t index(std::size_t type_id)
+		static std::size_t index(md::handle<Types...> const& handle)
 		{
-			return type_id;
+			return handle.type();
+		}
+	};
+
+	template<typename Type, typename... OtherTypes>
+	struct type_index<Type, OtherTypes...>
+	{
+		static std::size_t index(Type const&, OtherTypes const&... other_params)
+		{
+			return type_index<OtherTypes...>::index(other_params...);
+		}
+	};
+
+	template<typename Type>
+	struct type_index<Type>
+	{
+		static std::size_t index(Type const&)
+		{
+			return 0;
 		}
 	};
 
@@ -185,7 +235,7 @@ namespace md
 	template<typename Functor, template<typename...> class List, typename... Types>
 	struct dispatch_function<Functor, List<Types...>>
 	{
-		static auto function(Functor functor, typename _md_detail::replace<Types,void const>::type*... params)
+		static auto function(Functor functor, typename _md_detail::replace<Types,void const*>::type... params)
 		{
 			return functor(*const_cast<Types*>(reinterpret_cast<Types const*>(params))...);
 		}
@@ -211,23 +261,76 @@ namespace md
 
 
 
-	/// dispatcher
+	template<typename Type>
+	struct make_list
+	{
+		using type = typename meta::if_c<is_handle<Type>::value, Type, _md_detail::list<Type>>::type;
+	};
+
+	namespace _md_detail
+	{
+		template<typename>
+		struct get_object_dispatch
+		{
+			template<typename Object>
+			static void const* get(Object&& object)
+			{
+				return static_cast<void const*>(&object);
+			}
+		};
+
+		template<>
+		struct get_object_dispatch<std::true_type>
+		{
+			template<typename Handle>
+			static void const* get(Handle&& handle)
+			{
+				return handle.get();
+			}
+		};
+	}
+
+	template<typename Object>
+	void const* get_object(Object&& object)
+	{
+		return
+			_md_detail::get_object_dispatch<
+				typename is_handle<
+					typename std::remove_reference<Object>::type
+				>::type
+			>::get(std::forward<Object>(object));
+	}
+
+
+	// dispatcher
 	template<
-		typename    Functor,  // functor to be call with the recovered types
-		typename... TypeLists // lists of types describing the available type for each parameter
+		typename    Functor, // functor to be called with the recovered types
+		typename... Types    // a list of types, where the type can be a non-handle type or a md::handle
 	>
 	struct dispatcher
 	{
 		static auto function(std::size_t index)
 		{
-			return function_table<Functor, typename meta::cartesian_product<TypeLists...>::type>::get(index);
+			return
+				function_table<
+					Functor,
+					typename meta::apply_list<
+						meta::cartesian_product,
+						typename meta::map<
+							make_list,
+							_md_detail::list<
+								typename std::remove_cv<Types>::type...
+							>
+						>::type
+					>::type::type
+				>::get(index);
 		}
 
-		template<typename _Functor, typename... Handles>
-		static auto dispatch(_Functor&& functor, Handles&&... handles)
+		template<typename _Functor, typename... Objects>
+		static auto dispatch(_Functor&& functor, Objects&&... objects)
 		{
-			std::size_t index = type_index<TypeLists...>::index(handles.type()...);
-			return function(index)(std::forward<_Functor>(functor), handles.get()...);
+			std::size_t index = type_index<typename std::remove_cv<Types>::type...>::index(std::forward<Objects>(objects)...);
+			return function(index)(std::forward<_Functor>(functor), get_object(std::forward<Objects>(objects))...);
 		}
 	};
 
@@ -246,17 +349,6 @@ namespace md
 
 
 
-	/// get_list
-	template<typename> struct get_list;
-
-	template<template<typename> class Handle, typename List>
-	struct get_list<Handle<List>>
-	{
-		using type = List;
-	};
-
-
-
 	/// convenient function to have types deduced for dispatcher
 	/**
 		The return type is determined by the functor called with the first combination of parameters.
@@ -264,21 +356,17 @@ namespace md
 	*/
 	template<
 		typename Functor, // functor which accepts as many parameters as given lists (and every type combination of these lists)
-		typename... Handles // TODO: pack of lists containing the types available of the respective handle
+		typename... Types // a list of types, where the type can be a non-handle type or a md::handle
 	>
-	auto dispatch(Functor&& functor, Handles&&... handles)
+	auto dispatch(Functor&& functor, Types&&... objects)
 	{
 		return
 			dispatcher<
 				Functor,
-				typename std::remove_cv<
-					typename std::remove_reference<
-						Handles
-					>::type
-				>::type...
+				typename std::remove_reference<Types>::type...
 			>::dispatch(
 				std::forward<Functor>(functor),
-				std::forward<Handles>(handles)...
+				std::forward<Types>(objects)...
 			);
 	}
 
