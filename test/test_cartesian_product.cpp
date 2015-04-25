@@ -27,6 +27,21 @@ BOOST_AUTO_TEST_CASE(one_list)
 		>::value == true) );
 }
 
+BOOST_AUTO_TEST_CASE(single_lists)
+{
+	BOOST_CHECK( (
+		std::is_same<
+			typename meta::cartesian_product<
+				List<int>,
+				List<float>,
+				List<bool>
+			>::type,
+			List<
+				List<int, float, bool>
+			>
+		>::value == true) );
+}
+
 template<typename> struct probe;
 
 BOOST_AUTO_TEST_CASE(two_lists)
