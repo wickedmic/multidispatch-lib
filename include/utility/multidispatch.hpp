@@ -169,6 +169,12 @@ namespace md
 	{ };
 
 
+	template<typename Type>
+	struct make_list
+	{
+		using type = typename meta::if_c<is_handle<Type>::value, Type, _md_detail::list<Type>>::type;
+	};
+
 	// type_index
 	template<typename... Lists> struct type_index;
 
@@ -182,8 +188,8 @@ namespace md
 				meta::size<
 					typename meta::apply_list<
 						meta::cartesian_product,
-						typename meta::filter<
-							is_handle,
+						typename meta::map<
+							make_list,
 							_md_detail::list<OtherTypes...>
 						>::type
 					>::type::type
@@ -260,12 +266,6 @@ namespace md
 	};
 
 
-
-	template<typename Type>
-	struct make_list
-	{
-		using type = typename meta::if_c<is_handle<Type>::value, Type, _md_detail::list<Type>>::type;
-	};
 
 	namespace _md_detail
 	{
