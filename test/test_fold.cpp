@@ -9,7 +9,7 @@
 template<typename left, typename right>
 struct max;
 
-template<typename int_type, std::size_t left, std::size_t right>
+template<typename int_type, int_type left, int_type right>
 struct max<std::integral_constant<int_type, left>, std::integral_constant<int_type, right>>
 {
 	using type = std::integral_constant<int_type, left < right ? right : left>;
