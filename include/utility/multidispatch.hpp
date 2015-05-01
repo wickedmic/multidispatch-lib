@@ -13,132 +13,10 @@
 #include "if.hpp"
 #include "apply_list.hpp"
 #include "filter.hpp"
+#include "variant.hpp"
 
 namespace md
 {
-	struct empty_handle_exception {};
-
-	template<typename...>
-	struct handle
-	{
-	private:
-		/// interface for carried types
-		struct concept
-		{
-			virtual ~concept() = default;
-
-			virtual concept* copy() const = 0;
-			virtual std::size_t type() const = 0;
-			virtual void const* get() const = 0;
-		};
-
-		/// implementation of the concept interface
-		template<typename Object>
-		struct model : public concept
-		{
-			// ctor
-			template<typename _Object>
-			model(_Object&& object)
-				: object(std::forward<_Object>(object))
-			{ }
-
-			virtual concept* copy() const override { return new model(*this); }
-			virtual std::size_t type() const override { return meta::index_of<handle, Object>::value; }
-			virtual void const* get() const override { return reinterpret_cast<void const*>(&object); }
-
-			Object object;
-		};
-
-	public:
-		handle() = default;
-
-		template<typename Object>
-		handle(Object&& object)
-			: _object(new model<typename std::remove_reference<Object>::type>(std::forward<Object>(object)))
-		{ }
-
-		handle(handle const& other) : _object(other._object->copy()) { }
-
-		handle(handle&& other) noexcept = default;
-
-		handle& operator= (handle const& other)
-		{
-			handle tmp(other);
-			*this = std::move(tmp);
-			return *this;
-		}
-
-		handle& operator= (handle&& other) noexcept = default;
-
-		operator bool () const { return static_cast<bool>(_object); }
-
-
-		/// returns the index of the carried type
-		/**
-			The index is the position in the given type list.
-		*/
-		std::size_t type() const
-		{
-			if(_object)
-				return _object->type();
-			else
-				throw empty_handle_exception{};
-		}
-
-
-		/// returns a const void pointer to the carried object
-		/**
-			If the handle is empty nullptr will be returned.
-
-			This function is intended for internal use. If you just want
-			to access the carried type use the cast() function to access
-			the carried type safely.
-		*/
-		void const* get() const
-		{
-			if(_object)
-				return _object->get();
-			else
-				return nullptr;
-		}
-
-		/// sets the given object as the given type
-		/**
-			RequestedType must be in the list of types of this handle.
-			The given object must be convertible to the RequestedType.
-		*/
-		template<typename RequestedType, typename ActualType>
-		void set(ActualType&& object)
-		{
-			_object.reset(new model<RequestedType>(std::forward<ActualType>(object)));
-		}
-
-		/// removes the carried object making the handle empty
-		void reset()
-		{
-			_object.reset();
-		}
-
-	private:
-		std::unique_ptr<concept> _object;
-	};
-
-
-	/// returns a pointer to the carried type
-	/**
-		If the carried type corresponds to the requested type a valid
-		pointer	is returned, nullptr otherwise. Use handle::type() to
-		get the index into the handle's type list to identify the carried type.
-	*/
-	template<typename Type, typename... Types>
-	Type* cast(md::handle<Types...> const& handle)
-	{
-		if(meta::index_of<md::handle<Types...>, Type>::value == handle.type())
-			return const_cast<Type*>(reinterpret_cast<Type const*>(handle.get()));
-		else
-			return nullptr;
-	}
-
 
 	namespace _md_detail
 	{
@@ -159,12 +37,12 @@ namespace md
 	{ };
 
 	template<typename... Types>
-	struct is_handle<md::handle<Types...>>
+	struct is_handle<utility::variant<Types...>>
 		: public std::true_type
 	{ };
 
 	template<typename... Types>
-	struct is_handle<md::handle<Types...> const>
+	struct is_handle<utility::variant<Types...> const>
 		: public std::true_type
 	{ };
 
@@ -179,10 +57,10 @@ namespace md
 	template<typename... Lists> struct type_index;
 
 	template<typename... HandleTypes, typename... OtherTypes>
-	struct type_index<handle<HandleTypes...>, OtherTypes...>
+	struct type_index<utility::variant<HandleTypes...>, OtherTypes...>
 	{
 		/// returns the index of a set of types (given by thier ids)
-		static std::size_t index(md::handle<HandleTypes...> const& handle, OtherTypes const&... other_params)
+		static std::size_t index(utility::variant<HandleTypes...> const& handle, OtherTypes const&... other_params)
 		{
 			auto size =
 				meta::size<
@@ -200,9 +78,9 @@ namespace md
 	};
 
 	template<typename... Types>
-	struct type_index<handle<Types...>>
+	struct type_index<utility::variant<Types...>>
 	{
-		static std::size_t index(md::handle<Types...> const& handle)
+		static std::size_t index(utility::variant<Types...> const& handle)
 		{
 			return handle.type();
 		}
@@ -305,7 +183,7 @@ namespace md
 	// dispatcher
 	template<
 		typename    Functor, // functor to be called with the recovered types
-		typename... Types    // a list of types, where the type can be a non-handle type or a md::handle
+		typename... Types    // a list of types, where the type can be a non-handle type or a utility::variant
 	>
 	struct dispatcher
 	{
@@ -356,7 +234,7 @@ namespace md
 	*/
 	template<
 		typename Functor, // functor which accepts as many parameters as given lists (and every type combination of these lists)
-		typename... Types // a list of types, where the type can be a non-handle type or a md::handle
+		typename... Types // a list of types, where the type can be a non-handle type or a utility::variant
 	>
 	auto dispatch(Functor&& functor, Types&&... objects)
 	{

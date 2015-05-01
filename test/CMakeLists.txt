@@ -109,6 +109,10 @@ add_executable(test_multidispatch "test_multidispatch.cpp")
 target_link_libraries(test_multidispatch ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(test_multidispatch test_multidispatch)
 
+add_executable(test_variant "test_variant.cpp")
+target_link_libraries(test_variant ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(test_variant test_variant)
+
 add_executable(test_visitor "test_visitor.cpp")
 target_link_libraries(test_visitor ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 add_test(test_visitor test_visitor)
