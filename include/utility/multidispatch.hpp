@@ -54,55 +54,81 @@ namespace md
 	};
 
 	// type_index
-	template<typename... Lists> struct type_index;
-
-	template<typename... HandleTypes, typename... OtherTypes>
-	struct type_index<utility::variant<HandleTypes...>, OtherTypes...>
+	namespace _md_detail
 	{
-		/// returns the index of a set of types (given by thier ids)
-		static std::size_t index(utility::variant<HandleTypes...> const& handle, OtherTypes const&... other_params)
-		{
-			auto size =
-				meta::size<
-					typename meta::apply_list<
-						meta::cartesian_product,
-						typename meta::map<
-							make_list,
-							_md_detail::list<OtherTypes...>
-						>::type
-					>::type::type
-				>::value;
+		// type_index_impl prototype
+		template<bool, typename... Lists>
+		struct type_index_impl;
 
-			return handle.type() * size + type_index<OtherTypes...>::index(other_params...);
-		}
-	};
+		// type_index_dispatch
+		template<typename... Lists>
+		struct type_index_dispatch;
 
-	template<typename... Types>
-	struct type_index<utility::variant<Types...>>
-	{
-		static std::size_t index(utility::variant<Types...> const& handle)
-		{
-			return handle.type();
-		}
-	};
+		template<typename First, typename... OtherLists>
+		struct type_index_dispatch<First, OtherLists...>
+			: public type_index_impl<is_handle<First>::value, First, OtherLists...>
+		{ };
 
-	template<typename Type, typename... OtherTypes>
-	struct type_index<Type, OtherTypes...>
-	{
-		static std::size_t index(Type const&, OtherTypes const&... other_params)
-		{
-			return type_index<OtherTypes...>::index(other_params...);
-		}
-	};
+		template<typename First>
+		struct type_index_dispatch<First>
+			: public type_index_impl<is_handle<First>::value, First>
+		{ };
 
-	template<typename Type>
-	struct type_index<Type>
-	{
-		static std::size_t index(Type const&)
+		// type_indeX_impl specializations
+		template<template<typename...> class Handle, typename... Types, typename... OtherTypes>
+		struct type_index_impl<true, Handle<Types...>, OtherTypes...>
 		{
-			return 0;
-		}
-	};
+			/// returns the index of a set of types (given by thier ids)
+			static std::size_t index(Handle<Types...> const& handle, OtherTypes const&... other_params)
+			{
+				auto size =
+					meta::size<
+						typename meta::apply_list<
+							meta::cartesian_product,
+							typename meta::map<
+								make_list,
+								_md_detail::list<OtherTypes...>
+							>::type
+						>::type::type
+					>::value;
+
+				return handle.type() * size + type_index_dispatch<OtherTypes...>::index(other_params...);
+			}
+		};
+
+		template<template<typename...> class Handle, typename... Types>
+		struct type_index_impl<true, Handle<Types...>>
+		{
+			static std::size_t index(Handle<Types...> const& handle)
+			{
+				return handle.type();
+			}
+		};
+
+		template<typename Type, typename... OtherTypes>
+		struct type_index_impl<false, Type, OtherTypes...>
+		{
+			static std::size_t index(Type const&, OtherTypes const&... other_params)
+			{
+				return type_index_dispatch<OtherTypes...>::index(other_params...);
+			}
+		};
+
+		template<typename Type>
+		struct type_index_impl<false, Type>
+		{
+			static std::size_t index(Type const&)
+			{
+				return 0;
+			}
+		};
+
+	}
+
+	template<typename... Lists>
+	struct type_index
+		: public _md_detail::type_index_dispatch<Lists...>
+	{ };
 
 	template<>
 	struct type_index<>
@@ -112,6 +138,7 @@ namespace md
 			return 0; // return dummy index
 		}
 	};
+
 
 
 	template<typename Functor, typename TypeList> struct dispatch_function;
