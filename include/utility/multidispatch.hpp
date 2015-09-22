@@ -46,6 +46,9 @@ namespace md
 		: public std::true_type
 	{ };
 
+	template<typename Type>
+	using is_handle_t = typename is_handle<Type>::type;
+
 
 	template<typename Type>
 	struct make_list
@@ -174,36 +177,17 @@ namespace md
 
 	namespace _md_detail
 	{
-		template<typename>
-		struct get_object_dispatch
+		template<typename Object>
+		void const* get_object(Object&& object, std::false_type)
 		{
-			template<typename Object>
-			static void const* get(Object&& object)
-			{
-				return static_cast<void const*>(&object);
-			}
-		};
-
-		template<>
-		struct get_object_dispatch<std::true_type>
-		{
-			template<typename Handle>
-			static void const* get(Handle&& handle)
-			{
-				return handle.get();
-			}
-		};
+			return reinterpret_cast<void const*>(&object);
+		}
 	}
 
 	template<typename Object>
 	void const* get_object(Object&& object)
 	{
-		return
-			_md_detail::get_object_dispatch<
-				typename is_handle<
-					typename std::remove_reference<Object>::type
-				>::type
-			>::get(std::forward<Object>(object));
+		return get_object(std::forward<Object>(object), is_handle_t< std::remove_reference_t< Object > >{} );
 	}
 
 
