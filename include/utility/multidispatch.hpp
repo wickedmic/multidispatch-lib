@@ -12,8 +12,6 @@
 #include "size.hpp"
 #include "if.hpp"
 #include "apply_list.hpp"
-#include "filter.hpp"
-#include "variant.hpp"
 
 namespace md
 {
@@ -36,18 +34,9 @@ namespace md
 		: public std::false_type
 	{ };
 
-	template<typename... Types>
-	struct is_handle<utility::variant<Types...>>
-		: public std::true_type
-	{ };
-
-	template<typename... Types>
-	struct is_handle<utility::variant<Types...> const>
-		: public std::true_type
-	{ };
-
 	template<typename Type>
 	using is_handle_t = typename is_handle<Type>::type;
+
 
 
 	template<typename Type>
@@ -178,23 +167,29 @@ namespace md
 	namespace _md_detail
 	{
 		template<typename Object>
-		void const* get_object(Object&& object, std::false_type)
+		void const* get_object_address(Object&& object, std::false_type)
 		{
 			return reinterpret_cast<void const*>(&object);
+		}
+
+		template<typename Object>
+		void const* get_object_address(Object&& object, std::true_type)
+		{
+			return get_object_address(object);
 		}
 	}
 
 	template<typename Object>
 	void const* get_object(Object&& object)
 	{
-		return get_object(std::forward<Object>(object), is_handle_t< std::remove_reference_t< Object > >{} );
+		return _md_detail::get_object_address(std::forward<Object>(object), is_handle_t< std::remove_reference_t< Object > >{} );
 	}
 
 
 	// dispatcher
 	template<
 		typename    Functor, // functor to be called with the recovered types
-		typename... Types    // a list of types, where the type can be a non-handle type or a utility::variant
+		typename... Types    // a list of types, where the types can be handle and non-handle types
 	>
 	struct dispatcher
 	{
@@ -223,7 +218,7 @@ namespace md
 		}
 	};
 
-	/// case where no handles are given
+	/// case where no parameters are given
 	/**
 		same as directly calling functor()
 	*/
@@ -245,7 +240,7 @@ namespace md
 	*/
 	template<
 		typename Functor, // functor which accepts as many parameters as given lists (and every type combination of these lists)
-		typename... Types // a list of types, where the type can be a non-handle type or a utility::variant
+		typename... Types // a list of types, where the types can be handle and non-handle types
 	>
 	auto dispatch(Functor&& functor, Types&&... objects)
 	{
