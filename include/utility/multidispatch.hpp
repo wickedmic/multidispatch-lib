@@ -18,6 +18,7 @@ namespace md
 
 	namespace _md_detail
 	{
+		/// meta function, which replaces the first type by the second
 		template<typename, typename Type> struct replace
 		{
 			using type = Type;
@@ -66,7 +67,7 @@ namespace md
 			: public type_index_impl<is_handle<First>::value, First>
 		{ };
 
-		// type_indeX_impl specializations
+		// type_index_impl specializations
 		template<template<typename...> class Handle, typename... Types, typename... OtherTypes>
 		struct type_index_impl<true, Handle<Types...>, OtherTypes...>
 		{
@@ -117,6 +118,14 @@ namespace md
 
 	}
 
+	/// provides the function 'index' which returns a unique index for the given type combination
+	/**
+		The given template parameters are forming the input parameters of the index-function.
+		Each parameter can be a handle or non-handle type (see is_handle). A non-handle type
+		is treated as a handle with just one type. When calling the index function the given type
+		combination will define a unique index (here 'unique' means the returned integer identifies
+		the given type combination for the given list of types).
+	*/
 	template<typename... Lists>
 	struct type_index
 		: public _md_detail::type_index_dispatch<Lists...>

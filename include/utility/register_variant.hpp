@@ -1,3 +1,6 @@
+#ifndef INCLGUARD_register_variant_hpp
+#define INCLGUARD_register_variant_hpp
+
 #include "multidispatch.hpp"
 #include "variant.hpp"
 
@@ -22,3 +25,5 @@ namespace utility
 		return v.get();
 	}
 }
+
+#endif

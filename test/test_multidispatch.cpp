@@ -4,6 +4,8 @@
 
 #include <tuple>
 #include "multidispatch.hpp"
+#include "variant.hpp"
+#include "register_variant.hpp"
 
 BOOST_AUTO_TEST_CASE(type_index_test)
 {
@@ -48,7 +50,7 @@ BOOST_AUTO_TEST_CASE(dispatch_function_test)
 	BOOST_CHECK_EQUAL( (md::dispatch_function<functor,list>::function(functor{}, &i)), i );
 }
 
-BOOST_AUTO_TEST_CASE(dispatch_function_table)
+BOOST_AUTO_TEST_CASE(dispatch_function_table_test)
 {
 	using md::_md_detail::list;
 	using list1 = list<list<int>, list<float>>;
