@@ -10,29 +10,32 @@
 namespace meta
 {
 
-	/// prepends Item to each List in ListOfLists
-	template<typename Item, typename ListOfLists>
-	struct prepend_item_to_each_list
+	namespace _cartesian_product_detail
 	{
-		//template<typename PrependItem_List>
-		//struct prepend_item
-		//{
-		//	using type = typename meta::prepend<Item, PrependItem_List>::type;
-		//};
+		/// prepends Item to each list in ListOfLists
+		template<typename Item, typename ListOfLists>
+		struct prepend_item_to_each_list
+		{
+			//template<typename PrependItem_List>
+			//struct prepend_item
+			//{
+			//	using type = typename meta::prepend<Item, PrependItem_List>::type;
+			//};
 
-		//using type = typename meta::map<prepend_item, ListOfLists>::type;
-		using type =
-			typename meta::map<
-				meta::bind<
-					meta::prepend,
-					Item,
-					meta::arg<0>
-				>::template apply,
-				ListOfLists
-			>::type;
-	};
+			//using type = typename meta::map<prepend_item, ListOfLists>::type;
+			using type =
+				typename meta::map<
+					meta::bind<
+						meta::prepend,
+						Item,
+						meta::arg<0>
+					>::template apply,
+					ListOfLists
+				>::type;
+		};
+	}
 
-	/// cartesian_product
+	/// calculates the cartesian product of given lists of types
 	template<typename... List> struct cartesian_product;
 
 	template<template<typename...> class List>
@@ -61,7 +64,7 @@ namespace meta
 		template<typename Item>
 		struct append_combinations
 		{
-			using type = typename prepend_item_to_each_list<Item, sub_product>::type;
+			using type = typename _cartesian_product_detail::prepend_item_to_each_list<Item, sub_product>::type;
 		};
 
 		using type = typename meta::foldr<meta::concat, List<>, typename map<append_combinations, List<Items...>>::type>::type;

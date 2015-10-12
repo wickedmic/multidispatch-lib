@@ -13,11 +13,11 @@ namespace meta
 	};
 
 
-	// arg
+	// placeholder to represent an agrument
 	template<std::size_t N> struct arg;
 
 
-	// is_argument
+	// meta template function, which returns true if given type is of type arg
 	template<typename>
 	struct is_argument : public std::false_type
 	{ };
@@ -29,7 +29,7 @@ namespace meta
 
 
 
-	// pick_argument
+	// takes arg<N> as argument and returns the N-th element from the given list
 	template<typename Argument, typename List>
 	struct pick_argument
 	{
@@ -70,42 +70,41 @@ namespace meta
 	template<typename Placeholder, template<typename...> class List>
 	struct pick_argument<Placeholder, List<>>
 	{
-		// error message for empty List
 		static_assert(sizeof(Placeholder) == 0, "placeholder refers to non-existing parameter");
 	};
 
 
 
-	// applied_param_list
-	template<typename OrigParamList, typename AppliedParamList>
-	struct applied_param_list;
+	// replaces all arg<N> types in UntransformedParams with thier coresponding type from AvailableParams
+	template<typename UntransformedParams, typename AvailableParams>
+	struct transform_params;
 
 	template<
-		template<typename...> class OrigParamList,
+		template<typename...> class UntransformedParams,
 		typename FirstParam,
 		typename... OtherParams,
-		typename AppliedParamList
+		typename AvailableParams
 	>
-	struct applied_param_list<OrigParamList<FirstParam, OtherParams...>, AppliedParamList>
+	struct transform_params<UntransformedParams<FirstParam, OtherParams...>, AvailableParams>
 	{
 		using type =
 			typename meta::concat<
 				bind_detail::list<
 					typename if_<
 						typename is_argument<FirstParam>::type,
-						typename pick_argument<FirstParam, AppliedParamList>::type,
+						typename pick_argument<FirstParam, AvailableParams>::type,
 						FirstParam
 					>::type
 				>,
-				typename applied_param_list<bind_detail::list<OtherParams...>, AppliedParamList>::type
+				typename transform_params<bind_detail::list<OtherParams...>, AvailableParams>::type
 			>::type;
 	};
 
 	template<
-		template<typename...> class OrigParamList,
-		typename AppliedParamList
+		template<typename...> class UntransformedParams,
+		typename AvailableParams
 	>
-	struct applied_param_list<OrigParamList<>, AppliedParamList>
+	struct transform_params<UntransformedParams<>, AvailableParams>
 	{
 		using type = bind_detail::list<>;
 	};
@@ -113,7 +112,7 @@ namespace meta
 
 
 
-	// apply_function
+	// applies the given parameter list to the given meta function
 	template<template<typename...> class Function, typename Params>
 	struct apply_function;
 
@@ -129,19 +128,19 @@ namespace meta
 
 
 
-	// bind
+	// meta function wrapper to change the signature of the function
 	template<template<typename...> class function, typename... Params>
 	struct bind
 	{
-		template<typename... ApplyParams>
+		template<typename... AvailableParams>
 		struct apply
 		{
 			using type =
 				typename apply_function<
 					function,
-					typename applied_param_list<
+					typename transform_params<
 						bind_detail::list<Params...>,
-						bind_detail::list<ApplyParams...>
+						bind_detail::list<AvailableParams...>
 					>::type
 				>::type;
 		};

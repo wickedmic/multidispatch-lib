@@ -3,7 +3,7 @@
 
 namespace meta
 {
-	/// append
+	/// appends the given type to the end of the given list of types
 	template<typename TypeList, typename Type> struct append;
 
 	template<template<typename...> class List, typename... Types, typename Type>
