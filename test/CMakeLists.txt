@@ -3,17 +3,20 @@ cmake_policy(VERSION 2.8.11)
 
 project(utility_tests)
 
-# header files
-set(
-	utility_HEADER
+# test names
+set(test_list
+	test_apply_list
+	test_bind
+	test_cartesian_product
+	test_filter
+	test_fold
+	test_index_of
+	test_map
+	test_multidispatch
+	test_variant
+	test_visitor
+	test_boost_variant
 )
-
-
-# files to compile
-set(
-	utility_SRCS
-)
-
 
 if( NOT CMAKE_BUILD_TYPE )
 	set( CMAKE_BUILD_TYPE DEBUG )
@@ -77,42 +80,9 @@ include_directories(${Boost_INCLUDE_DIR})
 
 include_directories("../include/utility/")
 
-add_executable(test_apply_list "test_apply_list.cpp")
-target_link_libraries(test_apply_list ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_apply_list test_apply_list)
+foreach(test ${test_list})
+	add_executable(${test} "${test}.cpp")
+	target_link_libraries(${test} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+	add_test(${test} ${test})
+endforeach()
 
-add_executable(test_bind "test_bind.cpp")
-target_link_libraries(test_bind ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_bind test_bind)
-
-add_executable(test_cartesian_product "test_cartesian_product.cpp")
-target_link_libraries(test_cartesian_product ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_cartesian_product test_cartesian_product)
-
-add_executable(test_filter "test_filter.cpp")
-target_link_libraries(test_filter ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_filter test_filter)
-
-add_executable(test_fold "test_fold.cpp")
-target_link_libraries(test_fold ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_fold test_fold)
-
-add_executable(test_index_of "test_index_of.cpp")
-target_link_libraries(test_index_of ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_index_of test_index_of)
-
-add_executable(test_map "test_map.cpp")
-target_link_libraries(test_map ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_map test_map)
-
-add_executable(test_multidispatch "test_multidispatch.cpp")
-target_link_libraries(test_multidispatch ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_multidispatch test_multidispatch)
-
-add_executable(test_variant "test_variant.cpp")
-target_link_libraries(test_variant ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_variant test_variant)
-
-add_executable(test_visitor "test_visitor.cpp")
-target_link_libraries(test_visitor ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(test_visitor test_visitor)

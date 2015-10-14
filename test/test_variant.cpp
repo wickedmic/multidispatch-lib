@@ -2,7 +2,6 @@
 #define BOOST_TEST_MODULE variant
 #include <boost/test/unit_test.hpp>
 
-#include <tuple>
 #include "variant.hpp"
 
 BOOST_AUTO_TEST_CASE(variant_empty_test)

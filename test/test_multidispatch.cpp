@@ -7,6 +7,9 @@
 #include "variant.hpp"
 #include "register_variant.hpp"
 
+// --- type_index tests ---
+
+// check whether type_index returns the correct index for given type combination
 BOOST_AUTO_TEST_CASE(type_index_test)
 {
 	using h1 = utility::variant<int,float>;
@@ -15,32 +18,45 @@ BOOST_AUTO_TEST_CASE(type_index_test)
 	h1 a;
 	h2 b;
 
+	// variant only tests
 	a = 1; b = true;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, h2>::index(a, b)), 0 );
+
 	a = 1; b = 2.3;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, h2>::index(a, b)), 1 );
+
 	a = 4.5f; b = true;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, h2>::index(a, b)), 2 );
+
 	a = 4.5f; b = 2.3;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, h2>::index(a, b)), 3 );
 
 
+	// tests with extra non-handle type
 	a = 1; b = true;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, int, h2>::index(a, 1, b)), 0 );
+
 	a = 1; b = 2.3;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, int, h2>::index(a, 1, b)), 1 );
+
 	a = 4.5f; b = true;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, int, h2>::index(a, 1, b)), 2 );
+
 	a = 4.5f; b = 2.3;
 	BOOST_CHECK_EQUAL( (md::type_index<h1, int, h2>::index(a, 1, b)), 3 );
 
 
+	// test with no variant types (i.e. there is nothing to form a combination -> return value defined as 0)
 	BOOST_CHECK_EQUAL( (md::type_index<short, int, float>::index(1, 1, 1)), 0 );
 }
 
+
+// --- dispatch_function tests ---
+
+// check whether the functor returns the given int
 BOOST_AUTO_TEST_CASE(dispatch_function_test)
 {
-	using list = md::_md_detail::list<int>;
+	using list = md::detail::list<int>;
 	struct functor
 	{
 		int operator()(int i) const { return i; }
@@ -50,9 +66,10 @@ BOOST_AUTO_TEST_CASE(dispatch_function_test)
 	BOOST_CHECK_EQUAL( (md::dispatch_function<functor,list>::function(functor{}, &i)), i );
 }
 
+// check whether the correct function pointer is returned
 BOOST_AUTO_TEST_CASE(dispatch_function_table_test)
 {
-	using md::_md_detail::list;
+	using md::detail::list;
 	using list1 = list<list<int>, list<float>>;
 
 	struct functor
@@ -66,6 +83,7 @@ BOOST_AUTO_TEST_CASE(dispatch_function_table_test)
 }
 
 
+// is_handle tests
 BOOST_AUTO_TEST_CASE(is_handle_test)
 {
 	BOOST_CHECK_EQUAL( (md::is_handle<int>::value), false );
@@ -73,14 +91,16 @@ BOOST_AUTO_TEST_CASE(is_handle_test)
 	BOOST_CHECK_EQUAL( (md::is_handle<utility::variant<int> const>::value), true );
 }
 
+// make_list tests
 BOOST_AUTO_TEST_CASE(make_list_test)
 {
-	using md::_md_detail::list;
+	using md::detail::list;
 
-	BOOST_CHECK( (std::is_same<typename md::make_list<int>::type, list<int>>::value) );
-	BOOST_CHECK( (std::is_same<typename md::make_list<utility::variant<int>>::type, utility::variant<int>>::value) );
+	BOOST_CHECK( (std::is_same<typename md::detail::make_list<int>::type, list<int>>::value) );
+	BOOST_CHECK( (std::is_same<typename md::detail::make_list<utility::variant<int>>::type, utility::variant<int>>::value) );
 }
 
+// get_object tests
 BOOST_AUTO_TEST_CASE(get_object_test)
 {
 	utility::variant<int> hi = 42;
@@ -90,9 +110,10 @@ BOOST_AUTO_TEST_CASE(get_object_test)
 	BOOST_CHECK_EQUAL( md::get_object(f),  &f );
 }
 
+// dispatcher tests
 BOOST_AUTO_TEST_CASE(dispatcher_no_handle_test)
 {
-	using md::_md_detail::list;
+	using md::detail::list;
 
 	struct functor
 	{
@@ -104,7 +125,7 @@ BOOST_AUTO_TEST_CASE(dispatcher_no_handle_test)
 
 BOOST_AUTO_TEST_CASE(dispatcher_only_handle_test)
 {
-	using md::_md_detail::list;
+	using md::detail::list;
 
 	struct functor
 	{
@@ -118,21 +139,25 @@ BOOST_AUTO_TEST_CASE(dispatcher_only_handle_test)
 	BOOST_CHECK( (md::dispatcher<functor,h1,h2,h3>::dispatch(functor{}, h1{1}, h2{2.3f}, h3{true}) == std::tuple<int,float,bool>{1, 2.3f, true}) );
 }
 
+
 struct dispatcher_multi_handle_test_functor
 {
 	template<typename T1, typename T2>
-	auto operator()(T1 const& t1, T2 const& t2) const { return std::make_tuple(t1.m, t2.m); }
+	auto operator()(T1 const& t1, T2 const& t2) const
+	{
+		return std::make_tuple(t1.m, t2.m);
+	}
 };
 
 BOOST_AUTO_TEST_CASE(dispatcher_multi_handle_test)
 {
-	using md::_md_detail::list;
+	using md::detail::list;
 	using functor = dispatcher_multi_handle_test_functor;
 
 	struct t1{ int m; };
-	struct t2{ int _; int m; };
-	struct t3{ int _; int __; int m; };
-	struct t4{ int _; int __; int ___; int m; };
+	struct t2{ int _dummy1; int m; };
+	struct t3{ int _dummy1; int _dummy2; int m; };
+	struct t4{ int _dummy1; int _dummy2; int _dummy3; int m; };
 
 	using h1 = utility::variant<t1,t2>;
 	using h2 = utility::variant<t3,t4>;
@@ -156,7 +181,7 @@ struct dispatcher_mixed_handle_test_functor
 
 BOOST_AUTO_TEST_CASE(dispatcher_mixed_handle_test)
 {
-	using md::_md_detail::list;
+	using md::detail::list;
 	using functor = dispatcher_mixed_handle_test_functor;
 
 	struct t1{ int m; };
@@ -184,7 +209,8 @@ BOOST_AUTO_TEST_CASE(dispatcher_mixed_handle_test)
 	BOOST_CHECK( (md::dispatcher<functor,h1,h2,t2>::dispatch(functor{}, h1{ o2 }, h2{ o4 }, o2) == std::tuple<int,int,float>{2, 4, 2}) );
 }
 
-#define MAKE_FUNCTOR_OPERATOR(type1, type2, type3, return_value) unsigned operator()(type1,type2,type3) const { return return_value; }
+#define MAKE_FUNCTOR_OPERATOR(type1, type2, type3, return_value) \
+	unsigned operator()(type1,type2,type3) const { return return_value; }
 struct functor
 {
 	MAKE_FUNCTOR_OPERATOR(int,   double, void(*)(int,int), 0)
