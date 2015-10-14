@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
+#include "is_handle.hpp"
 #include "index_of.hpp"
 #include "concat.hpp"
 #include "prepend.hpp"
@@ -16,7 +17,7 @@
 namespace md
 {
 
-	namespace _md_detail
+	namespace detail
 	{
 		/// meta function, which replaces the first type by the second
 		template<typename, typename Type> struct replace
@@ -25,30 +26,14 @@ namespace md
 		};
 
 		template<typename...> struct list;
-	}
+
+		template<typename Type>
+		struct make_list
+		{
+			using type = typename meta::if_c<is_handle<Type>::value, Type, list<Type>>::type;
+		};
 
 
-
-	// is_handle
-	template<typename>
-	struct is_handle
-		: public std::false_type
-	{ };
-
-	template<typename Type>
-	using is_handle_t = typename is_handle<Type>::type;
-
-
-
-	template<typename Type>
-	struct make_list
-	{
-		using type = typename meta::if_c<is_handle<Type>::value, Type, _md_detail::list<Type>>::type;
-	};
-
-	// type_index
-	namespace _md_detail
-	{
 		// type_index_impl prototype
 		template<bool, typename... Lists>
 		struct type_index_impl;
@@ -80,7 +65,7 @@ namespace md
 							meta::cartesian_product,
 							typename meta::map<
 								make_list,
-								_md_detail::list<OtherTypes...>
+								detail::list<OtherTypes...>
 							>::type
 						>::type::type
 					>::value;
@@ -128,7 +113,7 @@ namespace md
 	*/
 	template<typename... Lists>
 	struct type_index
-		: public _md_detail::type_index_dispatch<Lists...>
+		: public detail::type_index_dispatch<Lists...>
 	{ };
 
 	template<>
@@ -142,18 +127,41 @@ namespace md
 
 
 
+	/// provides a funtion which is used to call the given functor with the original parameter types
+	/**
+		Provides the function 'function' which takes N parameters of type void const* and
+		calls the given functor with given parameters cast back into thier original types.
+		The template parameter TypeList definies for each given parameter the original type.
+
+		TypeList defines a list of types.
+		Functor is a callable type, which accepts parameters of type given by the type list TypeList.
+
+		As long as the return type of Functor and the number of elements in TypeList remain the same,
+		the function signature of 'function' also remains the same.
+	*/
 	template<typename Functor, typename TypeList> struct dispatch_function;
 
 	template<typename Functor, template<typename...> class List, typename... Types>
 	struct dispatch_function<Functor, List<Types...>>
 	{
-		static auto function(Functor functor, typename _md_detail::replace<Types,void const*>::type... params)
+		static auto function(Functor functor, typename detail::replace<Types,void const*>::type... params)
 		{
 			return functor(*const_cast<Types*>(reinterpret_cast<Types const*>(params))...);
 		}
 	};
 
 
+	/// provides a function, which returns a function of a 'virtual' function table
+	/**
+		Provides a function, which takes an index and returns the respective function of a function table,
+		which is defined by the given list of lists of types ListOfLists.
+
+		Each list in ListOfList consists of	a sequence of types, which can be seen as the parameter
+		list of the respective function in the function table. The function signature of each of these
+		functions has M+1 parameters: the first parameter is a callable type and is followed by M parameters
+		of type void const*. The purpose of these functions is to cast back each given parameter into its
+		original type (see dispatch_function).
+	*/
 	template<typename Functor, typename ListOfLists> struct function_table;
 
 	template<typename Functor, template<typename...> class List, typename FirstList, typename... OtherLists>
@@ -173,7 +181,8 @@ namespace md
 
 
 
-	namespace _md_detail
+	// helper functions for get_object
+	namespace detail
 	{
 		template<typename Object>
 		void const* get_object_address(Object&& object, std::false_type)
@@ -188,10 +197,11 @@ namespace md
 		}
 	}
 
+	/// returns the carried object of a handle object or the object itself if its a non-handle type
 	template<typename Object>
 	void const* get_object(Object&& object)
 	{
-		return _md_detail::get_object_address(std::forward<Object>(object), is_handle_t< std::remove_reference_t< Object > >{} );
+		return detail::get_object_address(std::forward<Object>(object), is_handle_t< std::remove_reference_t< Object > >{} );
 	}
 
 
@@ -210,8 +220,8 @@ namespace md
 					typename meta::apply_list<
 						meta::cartesian_product,
 						typename meta::map<
-							make_list,
-							_md_detail::list<
+							detail::make_list,
+							detail::list<
 								typename std::remove_cv<Types>::type...
 							>
 						>::type
