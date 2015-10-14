@@ -2,6 +2,7 @@
 #define INCLGUARD_register_boost_variant_hpp
 
 #include <boost/variant.hpp>
+#include "is_handle.hpp"
 
 namespace md
 {
@@ -14,44 +15,44 @@ namespace md
 	struct is_handle<boost::variant<Types...> const>
 		: public std::true_type
 	{ };
+
+	namespace _detail
+	{
+		template<typename... Types>
+		struct get_object_address_visitor;
+
+		template<typename FirstType, typename... OtherTypes>
+		struct get_object_address_visitor<FirstType, OtherTypes...>
+			: public get_object_address_visitor<OtherTypes...>
+		{
+			using base = get_object_address_visitor<OtherTypes...>;
+			using base::operator();
+
+			void const* operator()(FirstType const& object) const
+			{
+				return reinterpret_cast<void const*>(&object);
+			}
+		};
+
+		template<typename Type>
+		struct get_object_address_visitor<Type>
+			: public boost::static_visitor<void const*>
+		{
+			void const* operator()(Type const& object) const
+			{
+				return reinterpret_cast<void const*>(&object);
+			}
+		};
+	}
 }
 
-namespace boost
+namespace boost // for adl
 {
-	template<typename... Types>
-	struct get_object_address_visitor_impl;
-
-	template<typename FirstType, typename... OtherTypes>
-	struct get_object_address_visitor_impl<FirstType, OtherTypes...>
-		: public get_object_address_visitor_impl<OtherTypes...>
-	{
-		using base = get_object_address_visitor_impl<OtherTypes...>;
-		using base::operator();
-
-		void const* operator()(FirstType& object) const
-		{
-			return reinterpret_cast<void const*>(&object);
-		}
-	};
-
-	template<>
-	struct get_object_address_visitor_impl<>
-		: public boost::static_visitor<void const*>
-	{ };
-
-
-	template<typename VariantType>
-	struct get_object_address_visitor;
-
-	template<typename... Types>
-	struct get_object_address_visitor<boost::variant<Types...>>
-		: public get_object_address_visitor_impl<Types...>
-	{ }
-
 	template<typename... Types>
 	void const* get_object_address(boost::variant<Types...> const& v)
 	{
-		return boost::apply_visitor(get_object_address_visitor<boost::visitor<Types...>>{}, v);
+		using md::_detail::get_object_address_visitor;
+		return boost::apply_visitor(get_object_address_visitor<Types...>{}, v);
 	}
 }
 
