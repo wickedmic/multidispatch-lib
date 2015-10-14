@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
-#include "is_handle.hpp"
+#include "handle_interface.hpp"
 #include "index_of.hpp"
 #include "concat.hpp"
 #include "prepend.hpp"
@@ -19,18 +19,28 @@ namespace md
 
 	namespace detail
 	{
+		/// list type to carry an abitrary lone list of types
+		template<typename...> struct list;
+
+
 		/// meta function, which replaces the first type by the second
 		template<typename, typename Type> struct replace
 		{
 			using type = Type;
 		};
 
-		template<typename...> struct list;
 
 		template<typename Type>
 		struct make_list
 		{
-			using type = typename meta::if_c<is_handle<Type>::value, Type, list<Type>>::type;
+			using type =
+				typename meta::if_c<
+					is_handle<Type>::value,
+					typename type_list<
+						std::remove_cv_t<Type>
+					>::type,
+					list<Type>
+				>::type;
 		};
 
 
@@ -70,7 +80,8 @@ namespace md
 						>::type::type
 					>::value;
 
-				return handle.type() * size + type_index_dispatch<OtherTypes...>::index(other_params...);
+				// note: type_id is part of the interface for handles
+				return type_id(handle) * size + type_index_dispatch<OtherTypes...>::index(other_params...);
 			}
 		};
 
@@ -79,7 +90,7 @@ namespace md
 		{
 			static std::size_t index(Handle<Types...> const& handle)
 			{
-				return handle.type();
+				return type_id(handle);
 			}
 		};
 
@@ -197,7 +208,7 @@ namespace md
 		}
 	}
 
-	/// returns the carried object of a handle object or the object itself if its a non-handle type
+	/// returns a pointer to the carried object of a handle object or to the object itself if its a non-handle type
 	template<typename Object>
 	void const* get_object(Object&& object)
 	{
@@ -212,6 +223,7 @@ namespace md
 	>
 	struct dispatcher
 	{
+		// return the function pointer for the given index
 		static auto function(std::size_t index)
 		{
 			return
@@ -222,7 +234,7 @@ namespace md
 						typename meta::map<
 							detail::make_list,
 							detail::list<
-								typename std::remove_cv<Types>::type...
+								Types...
 							>
 						>::type
 					>::type::type
@@ -252,7 +264,7 @@ namespace md
 
 
 
-	/// convenient function to have types deduced for dispatcher
+	/// primary interface function for multidispatching
 	/**
 		The return type is determined by the functor called with the first combination of parameters.
 		Other parameter-type combinations must have the same return type.

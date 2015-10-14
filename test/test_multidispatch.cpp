@@ -6,6 +6,7 @@
 #include "multidispatch.hpp"
 #include "variant.hpp"
 #include "register_variant.hpp"
+#include "register_boost_variant.hpp"
 
 // --- type_index tests ---
 
@@ -83,7 +84,7 @@ BOOST_AUTO_TEST_CASE(dispatch_function_table_test)
 }
 
 
-// is_handle tests
+// --- is_handle tests ---
 BOOST_AUTO_TEST_CASE(is_handle_test)
 {
 	BOOST_CHECK_EQUAL( (md::is_handle<int>::value), false );
@@ -91,7 +92,7 @@ BOOST_AUTO_TEST_CASE(is_handle_test)
 	BOOST_CHECK_EQUAL( (md::is_handle<utility::variant<int> const>::value), true );
 }
 
-// make_list tests
+// --- make_list tests ---
 BOOST_AUTO_TEST_CASE(make_list_test)
 {
 	using md::detail::list;
@@ -100,7 +101,7 @@ BOOST_AUTO_TEST_CASE(make_list_test)
 	BOOST_CHECK( (std::is_same<typename md::detail::make_list<utility::variant<int>>::type, utility::variant<int>>::value) );
 }
 
-// get_object tests
+// --- get_object tests ---
 BOOST_AUTO_TEST_CASE(get_object_test)
 {
 	utility::variant<int> hi = 42;
@@ -110,7 +111,7 @@ BOOST_AUTO_TEST_CASE(get_object_test)
 	BOOST_CHECK_EQUAL( md::get_object(f),  &f );
 }
 
-// dispatcher tests
+// --- dispatcher tests ---
 BOOST_AUTO_TEST_CASE(dispatcher_no_handle_test)
 {
 	using md::detail::list;
@@ -209,6 +210,8 @@ BOOST_AUTO_TEST_CASE(dispatcher_mixed_handle_test)
 	BOOST_CHECK( (md::dispatcher<functor,h1,h2,t2>::dispatch(functor{}, h1{ o2 }, h2{ o4 }, o2) == std::tuple<int,int,float>{2, 4, 2}) );
 }
 
+// --- dispatch tests ---
+
 #define MAKE_FUNCTOR_OPERATOR(type1, type2, type3, return_value) \
 	unsigned operator()(type1,type2,type3) const { return return_value; }
 struct functor
@@ -290,3 +293,22 @@ BOOST_AUTO_TEST_CASE(const_types)
 	BOOST_CHECK_EQUAL( utility::cast_variant<TestClass4>(h2)->f, 1.234f );
 }
 
+// --- boost::variant tests ---
+BOOST_AUTO_TEST_CASE(boost_variant)
+{
+	boost::variant<int, float> h1_1 = 1;
+	boost::variant<int, float> h1_2 = 2.3f;
+	boost::variant<double, bool> h2_1 = 4.5;
+	boost::variant<double, bool> h2_2 = true;
+	boost::variant<void(*)(int,int), int*> h3_1 = static_cast<void(*)(int,int)>(nullptr);
+	boost::variant<void(*)(int,int), int*> h3_2 = static_cast<int*>(nullptr);
+
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_1, h3_1)), 0);
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_1, h3_2)), 1);
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_2, h3_1)), 2);
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_2, h3_2)), 3);
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_1, h3_1)), 4);
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_1, h3_2)), 5);
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_2, h3_1)), 6);
+	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_2, h3_2)), 7);
+}

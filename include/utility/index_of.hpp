@@ -17,7 +17,7 @@ namespace meta
 		static constexpr unsigned value = 0;
 	};
 
-} // namespace utility
+} // namespace meta
 
 #endif
 

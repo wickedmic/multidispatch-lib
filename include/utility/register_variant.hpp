@@ -1,8 +1,9 @@
 #ifndef INCLGUARD_register_variant_hpp
 #define INCLGUARD_register_variant_hpp
 
-#include "multidispatch.hpp"
+#include "handle_interface.hpp"
 #include "variant.hpp"
+
 
 namespace md
 {
@@ -23,6 +24,12 @@ namespace utility
 	void const* get_object_address(utility::variant<Types...> const& v)
 	{
 		return v.get();
+	}
+
+	template<typename... Types>
+	std::size_t type_id(utility::variant<Types...> const& v)
+	{
+		return v.type();
 	}
 }
 
