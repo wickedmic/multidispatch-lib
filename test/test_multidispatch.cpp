@@ -292,23 +292,3 @@ BOOST_AUTO_TEST_CASE(const_types)
 	BOOST_CHECK_EQUAL( md::dispatch(functor{}, h2), 2);
 	BOOST_CHECK_EQUAL( utility::cast_variant<TestClass4>(h2)->f, 1.234f );
 }
-
-// --- boost::variant tests ---
-BOOST_AUTO_TEST_CASE(boost_variant)
-{
-	boost::variant<int, float> h1_1 = 1;
-	boost::variant<int, float> h1_2 = 2.3f;
-	boost::variant<double, bool> h2_1 = 4.5;
-	boost::variant<double, bool> h2_2 = true;
-	boost::variant<void(*)(int,int), int*> h3_1 = static_cast<void(*)(int,int)>(nullptr);
-	boost::variant<void(*)(int,int), int*> h3_2 = static_cast<int*>(nullptr);
-
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_1, h3_1)), 0);
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_1, h3_2)), 1);
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_2, h3_1)), 2);
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_1, h2_2, h3_2)), 3);
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_1, h3_1)), 4);
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_1, h3_2)), 5);
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_2, h3_1)), 6);
-	BOOST_CHECK_EQUAL( (md::dispatch(functor{}, h1_2, h2_2, h3_2)), 7);
-}

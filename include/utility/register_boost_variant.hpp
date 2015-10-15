@@ -88,36 +88,36 @@ namespace boost
 	}
 }
 
-// --- type_id_visitor ---
+// --- type_id ---
 namespace md
 {
 	namespace _detail
 	{
-		template<std::size_t N, std::size_t Level, typename... Types>
+		template<std::size_t N, typename List>
 		struct type_id_visitor;
 
-		template<std::size_t N, std::size_t Level, typename FirstType, typename... OtherTypes>
-		struct type_id_visitor<N, Level, FirstType, OtherTypes...>
-			: public type_id_visitor<N, Level-1, OtherTypes...>
+		template<std::size_t N, template<typename...> class List, typename FirstType, typename... OtherTypes>
+		struct type_id_visitor<N, List<FirstType, OtherTypes...>>
+			: public type_id_visitor<N, List<OtherTypes...>>
 		{
-			using base = type_id_visitor<N, Level-1, OtherTypes...>;
+			using base = type_id_visitor<N, List<OtherTypes...>>;
 			using base::operator();
 
 			std::size_t operator()(FirstType const&) const
 			{
-				return N-Level;
+				return N - sizeof...(OtherTypes) - 1;
 			}
 		};
 
-		template<std::size_t N, typename FirstType, typename... OtherTypes>
-		struct type_id_visitor<N, 1, FirstType, OtherTypes...>
+		template<std::size_t N, template<typename...> class List, typename Type>
+		struct type_id_visitor<N, List<Type>>
 			: public boost::static_visitor<std::size_t>
 		{
-			std::size_t operator()(FirstType const&) const
+			std::size_t operator()(Type const&) const
 			{
-				return N-1;
+				return N - 1;
 			}
-		};
+	   	};
 	}
 }
 
@@ -130,8 +130,7 @@ namespace boost
 		return boost::apply_visitor(
 			md::_detail::type_id_visitor<
 				meta::size<type_list>::value,
-				meta::size<type_list>::value,
-				Types...
+				type_list
 			>{},
 			variant);
 	}
